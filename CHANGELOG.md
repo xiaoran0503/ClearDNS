@@ -101,4 +101,4 @@
 
 ### 验证
 
-- 代码改动经 GitHub Actions 全量构建（无国内优化直连版）；构建成功后按流程 1ms 拉取镜像部署冒烟测试。
+- 代码改动经 GitHub Actions 全量构建（无国内优化直连版）；构建成功后按流程 1ms 拉取镜像部署冒烟测试。- v2.0.2 构建（run 35707091974 全绿）经 1ms 拉取部署冒烟通过：ClearDNS v2.0.0-10-g208e0f0 / dnsproxy 0.84.2 / overture v2.0.9；国内组（阿里 DoH）、国外组（doh.ac0.top）、主入口 overture 分流解析全部正常；**S3 修复实测**：`kill -9` overture 后 6 秒内自动重启（新 PID），重启后解析正常。
