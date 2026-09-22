@@ -76,7 +76,9 @@ void cleardns() { // cleardns service
 
     create_folder(EXPOSE_DIR);
     create_folder(WORK_DIR);
-    chdir(EXPOSE_DIR);
+    if (chdir(EXPOSE_DIR)) { // change working directory
+        log_fatal("Change to `%s` directory failed", EXPOSE_DIR);
+    }
     load_config(settings.config); // configure parser
     free(settings.config);
     if (settings.debug) { // debug mode enabled

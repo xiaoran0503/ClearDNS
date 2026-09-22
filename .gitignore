@@ -6,4 +6,7 @@
 /cmake-build-release/
 
 /assets/*.txt
+!/assets/gfwlist.txt
+!/assets/china-ip.txt
+!/assets/chinalist.txt
 /include/constant.h

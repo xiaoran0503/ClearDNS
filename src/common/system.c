@@ -74,7 +74,10 @@ char* read_file(const char *file) { // read file content
         log_fatal("No enough memory for reading file"); // file too large
     }
     rewind(fp);
-    fread(content, 1, length, fp); // read file stream
+    size_t read_len = fread(content, 1, length, fp); // read file stream
+    if (read_len != (size_t)length) {
+        log_fatal("File `%s` read error", file);
+    }
     content[length] = '\0'; // set end flag
     fclose(fp);
     log_debug("File `%s` read success ->\n%s", file, content);

@@ -44,9 +44,9 @@ foreign:\n\
 assets:\n\
   cron: \"0 4 * * *\"\n\
   update:\n\
-    gfwlist.txt: https://cdn.dnomd343.top/cleardns/gfwlist.txt\n\
-    china-ip.txt: https://cdn.dnomd343.top/cleardns/china-ip.txt\n\
-    chinalist.txt: https://cdn.dnomd343.top/cleardns/chinalist.txt\n\
+    gfwlist.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt\n\
+    china-ip.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt\n\
+    chinalist.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt\n\
 "
 
 void load_default_config(const char *config_file) {

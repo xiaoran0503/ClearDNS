@@ -1,0 +1,52 @@
+name: Update Assets
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: pip install netaddr
+
+      - name: Generate assets
+        working-directory: assets
+        run: |
+          ./gfwlist.py
+          ./china-ip.py
+          ./chinalist.py
+
+      - name: Compress assets
+        working-directory: assets
+        run: |
+          xz -9 -k gfwlist.txt
+          xz -9 -k china-ip.txt
+          xz -9 -k chinalist.txt
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/*.txt assets/*.txt.xz
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "build: update assets $(date -u +%Y-%m-%d)"
+            git push
+          fi

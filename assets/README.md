@@ -62,28 +62,22 @@ https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/direct-
 https://github.com/felixonmars/dnsmasq-china-list/raw/master/accelerated-domains.china.conf'
 ```
 
-## 下发地址
+## 下发地址（GitHub Actions 自动维护）
 
-> 服务端支持 Gzip 和 Brotli 压缩，纯文本资源下载时启用可显著加快速度。
+> 纯文本资源由本仓库 GitHub Actions 每日自动生成，可随时拉取最新数据。
 
-FTP 链接：
+文本下载链接（GitHub 直连）：
 
-+ `gfwlist.txt` ：`https://res.343.re/Share/cleardns/gfwlist.txt`
-+ `china-ip.txt` ：`https://res.343.re/Share/cleardns/china-ip.txt`
-+ `chinalist.txt` ：`https://res.343.re/Share/cleardns/chinalist.txt`
++ `gfwlist.txt` ：`https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt`
++ `china-ip.txt` ：`https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt`
++ `chinalist.txt` ：`https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt`
 
 > 如果下载工具不支持压缩，可以使用以下预压缩文件，加快下载速度。
 
-压缩资源链接：
+压缩资源链接（`ghfast.top` 镜像加速）：
 
-+ `gfwlist.txt` ：`https://res.343.re/Share/cleardns/gfwlist.txt.xz`
-+ `china-ip.txt` ：`https://res.343.re/Share/cleardns/china-ip.txt.xz`
-+ `chinalist.txt` ：`https://res.343.re/Share/cleardns/chinalist.txt.xz`
++ `gfwlist.txt` ：`https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt.xz`
++ `china-ip.txt` ：`https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt.xz`
++ `chinalist.txt` ：`https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt.xz`
 
-> `res.343.re` 为主 FTP 地址，`cdn.dnomd343.top` 为 CDN 镜像地址，国内用户访问更快。
-
-CDN 下载链接：
-
-+ `gfwlist.txt` ：`https://cdn.dnomd343.top/cleardns/gfwlist.txt`
-+ `china-ip.txt` ：`https://cdn.dnomd343.top/cleardns/china-ip.txt`
-+ `chinalist.txt` ：`https://cdn.dnomd343.top/cleardns/chinalist.txt`
+> 资源文件由本仓库 GitHub Actions 每日自动生成并提交（含 `.txt` 与 `.txt.xz` 双份），构建期与运行期均从本仓库拉取。

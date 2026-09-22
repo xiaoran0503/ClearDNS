@@ -56,21 +56,21 @@ ClearDNS 支持多种 DNS 协议，首先是常规 DNS ，即基于 UDP 或 TCP 
 
 当分流器接到请求时，若在 `chinalist.txt` 中有所匹配，则只请求国内组，若在 `gfwlist.txt` 中匹配，则仅请求国外组；两者均未未匹配的情况下，将同时请求国内组与国外组，若国内组返回结果在 `china-ip.txt` 中，则证明 DNS 未被污染，采纳国内组结果，若返回国外 IP 地址，则可能已经被污染，将选取国外组结果。
 
-由于以上资源数据一直在变动，ClearDNS 内置了更新功能，用于自动获取新的资源文件；本项目提供了默认分流配置文件，从多个上游项目收集后合并，每天零点更新一次，数据处理的源码可见[此处](./assets)，下发地址如下：
+由于以上资源数据一直在变动，ClearDNS 内置了更新功能，用于自动获取新的资源文件；本项目提供了默认分流配置文件，从多个上游项目收集后合并，每天更新一次（由 GitHub Actions 自动维护），数据处理的源码可见[此处](./assets)，下发地址如下：
 
-+ `gfwlist.txt` ：`https://res.343.re/Share/cleardns/gfwlist.txt`
++ `gfwlist.txt` ：`https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt`
 
-+ `china-ip.txt` ：`https://res.343.re/Share/cleardns/china-ip.txt`
++ `china-ip.txt` ：`https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt`
 
-+ `chinalist.txt` ：`https://res.343.re/Share/cleardns/chinalist.txt`
++ `chinalist.txt` ：`https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt`
 
-国内用户直接访问下载站可能偏慢，建议使用以下镜像地址：
+国内用户直接访问 GitHub 可能偏慢，建议使用以下镜像地址（ghfast.top 加速）：
 
-+ `gfwlist.txt` ：`https://cdn.dnomd343.top/cleardns/gfwlist.txt`
++ `gfwlist.txt` ：`https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt`
 
-+ `china-ip.txt` ：`https://cdn.dnomd343.top/cleardns/china-ip.txt`
++ `china-ip.txt` ：`https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt`
 
-+ `chinalist.txt` ：`https://cdn.dnomd343.top/cleardns/chinalist.txt`
++ `chinalist.txt` ：`https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt`
 
 在 ClearDNS 的默认配置文件中，使用了本项目的分流资源作为更新上游，您可以修改配置，指向自定义资源（支持多个本地或远程文件），也可禁用更新。
 
@@ -140,9 +140,9 @@ foreign:
 assets:
   cron: "0 4 * * *"
   update:
-    gfwlist.txt: https://cdn.dnomd343.top/cleardns/gfwlist.txt
-    china-ip.txt: https://cdn.dnomd343.top/cleardns/china-ip.txt
-    chinalist.txt: https://cdn.dnomd343.top/cleardns/chinalist.txt
+    gfwlist.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt
+    china-ip.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt
+    chinalist.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt
 ```
 
 ### Port
@@ -279,7 +279,7 @@ Hosts 记录列表，指定域名对应 IP 地址，支持正则匹配，默认�
 
 ```yaml
 hosts:
-  - "10.0.0.1 example.com$"
+  - "10.0.0.1 example.com "
   - "..."
 ```
 
@@ -289,7 +289,7 @@ hosts:
 
 ```yaml
 ttl:
-  - "example.com$ 300"
+  - "example.com  300"
   - "..."
 ```
 
@@ -314,12 +314,12 @@ assets:
   disable: false
   cron: "0 4 * * *"
   update:
-    gfwlist.txt: https://cdn.dnomd343.top/cleardns/gfwlist.txt
-    china-ip.txt: https://cdn.dnomd343.top/cleardns/china-ip.txt
+    gfwlist.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt
+    china-ip.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt
     chinalist.txt:
-      - https://cdn.dnomd343.top/cleardns/chinalist.txt
+      - https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt
       - /tmp/chinalist-local.txt
-      - demo.list  # aka `${WorkDir}/assets/demo.list`
+      - demo.list  # aka ` {WorkDir}/assets/demo.list`
     custom.txt:
       - https://.../my-custom-asset.txt
 ```
@@ -362,11 +362,11 @@ ClearDNS 基于 Docker 网络有以下三种部署模式：
 
 ```bash
 # 检查Docker环境
-$ docker --version
+  docker --version
 ··· Docker 版本信息 ···
 
 # 无Docker环境请先执行安装
-$ wget -qO- https://get.docker.com/ | bash
+  wget -qO- https://get.docker.com/ | bash
 ··· Docker 安装日志 ···
 ```
 
@@ -495,10 +495,10 @@ services:
 
 ```bash
 # 开启eth0网卡混杂模式
-$ ip link set eth0 promisc on
+  ip link set eth0 promisc on
 
 # 创建macvlan网络，按实际情况指定网络信息
-$ docker network create -d macvlan \
+  docker network create -d macvlan \
   --subnet=IPv4网段 --gateway=IPv4网关 \
   --subnet=IPv6网段 --gateway=IPv6网关 \  # IPv6可选
   --ipv6 -o parent=eth0 macvlan  # 在eth0网卡上运行
@@ -573,7 +573,7 @@ iface macvlan inet static
 重启宿主机网络生效（或直接重启系统）：
 
 ```bash
-$ /etc/init.d/networking restart
+  /etc/init.d/networking restart
 [ ok ] Restarting networking (via systemctl): networking.service.
 ```
 
@@ -690,7 +690,7 @@ ClearDNS 上游分为国内组 `Domestic` 与国外组 `Foreign` ，它们的配
 您可以借助 [dnslookup](https://github.com/ameshkov/dnslookup) 工具进行测试，使用以下命令多次测试后取平均值，可以大致反映延迟时长。
 
 ```bash
-$ time dnslookup baidu.com tls://dns.pub
+  time dnslookup baidu.com tls://dns.pub
 ··· DNS 查询返回 ···
 
 real    0m0.030s
@@ -703,17 +703,17 @@ sys     0m0.005s
 ### 本地构建
 
 ```bash
-$ git clone https://github.com/dnomd343/ClearDNS.git
-$ cd ./ClearDNS/
-$ docker build -t cleardns .
+  git clone https://github.com/xiaoran0503/ClearDNS.git
+  cd ./ClearDNS/
+  docker build -t cleardns .
 ```
 
 ### 交叉构建
 
 ```bash
-$ git clone https://github.com/dnomd343/ClearDNS.git
-$ cd ./ClearDNS/
-$ docker buildx build \
+  git clone https://github.com/xiaoran0503/ClearDNS.git
+  cd ./ClearDNS/
+  docker buildx build \
     -t dnomd343/cleardns \
     -t ghcr.io/dnomd343/cleardns \
     -t registry.cn-shenzhen.aliyuncs.com/dnomd343/cleardns \
