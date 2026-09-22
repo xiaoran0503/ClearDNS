@@ -147,4 +147,11 @@
 ### 验证
 
 - 本机 WSL：`process.c` / `default.c` / `assets.c` 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译零警告零错误；三个 assets 脚本 `py_compile` 通过。
-- 推送后经 GitHub Actions 直连构建，1ms 拉取镜像部署：**容器级复现验证**——将 Domestic 组 `dnsproxy` 替换为秒死脚本模拟"首个组件崩溃循环"，确认修复后 Foreign / overture / crond / AdGuardHome 仍被拉起、`Process start complete` 出现；随后恢复真实二进制冒烟解析。
+- 推送后 GitHub Actions 直连构建（run 35711899182 全绿，GHA 缓存加速约 3 分钟）；1ms 拉取镜像部署。
+- **容器级复现验证（真实镜像实测）**：将 Domestic 组 `dnsproxy` 替换为条件秒死脚本（domestic 调用 exit 1、foreign 转交真实二进制）模拟"首个组件崩溃循环"：
+  - `Process start complete` 出现（启动循环走完，旧代码此场景永不出现）；Foreign / overture / crond / AdGuardHome 全部被拉起并存活；
+  - Domestic 崩溃循环被节流处理：每 1 秒重启一次（PID 25→128→141→…→146，7 次），全程 0 `waitpid error` / 0 fatal；
+  - **v2.0.3 ECHILD 幽灵槽位守卫被真实触发 6 次**（`already reaped -> restart`，秒死 PID 被兜底回收后守卫降级重启而非致命退出），两轮修复协同生效；
+  - 首次崩溃处理延迟 45 秒系 assets 首更（SIGALRM 同步拉取）占用所致——CHILD_EXIT 标志待处理、更新结束后统一重启，无事件丢失（报告 2.5 节权衡符合预期）；
+  - 容器最终仅因外部 SIGTERM 退出（`Get exit signal` 正常路径），非缺陷。
+- **干净镜像冒烟（v2.0.0-14-g1cfddc2）**：五服务 running success + `Process start complete`；国内组（阿里 DoH）、国外组（doh.ac0.top）、主入口 overture 分流解析全部正常。
