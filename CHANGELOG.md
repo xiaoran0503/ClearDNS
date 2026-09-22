@@ -43,3 +43,14 @@
 
 - README 同步资源下发地址（自有仓库 + ghfast.top 镜像）；
 - 本 Changelog 建立，后续迭代持续登记。
+
+### 构建链补充优化（本版本内落地）
+
+- 修复 golang 官方镜像默认 WORKDIR 为 `/go` 导致源码解压目录错位的问题（各阶段显式 `WORKDIR /` 后再解压）；
+- ARG 作用域修复：`GH_MIRROR` / `GOPROXY` / `APT_MIRROR` 在各 FROM 阶段内重新声明，构建参数正确生效；
+- 容器内包管理走国内镜像：apt=清华 TUNA（`APT_MIRROR` 可覆盖）、npm=npmmirror、cargo=rsproxy（`.cargo/config.toml`）、pip=清华 pypi；
+- AdGuardHome 构建以 `GOTOOLCHAIN=local` 使用镜像内 Go 1.27.1（官方 Makefile 写死 go1.26.6 会去 proxy.golang.org 下载 toolchain，国内超时）；
+- ClearDNS 阶段补齐 `libc6-dev`（gcc 编译需 glibc 开发包）；
+- `cmake_minimum_required` 全部升级至最新稳定版 4.2（构建环境为 pip 安装的最新 CMake / WSL 4.2.3）；
+- 新增 `.dockerignore` 排除本地 `bin/` 构建产物，避免 CMakeCache 路径污染容器构建；
+- Docker 镜像完整构建验证通过：cleardns v2.0.0-1-gb0e3e08 / dnsproxy 0.84.2 / overture v2.0.9 / AdGuardHome v0.107.79，最终运行时 Debian 13 (trixie)，UPX 压缩后四件套齐备；镜像内冒烟测试 DNS 服务正常起停、assets 三列表加载成功。
