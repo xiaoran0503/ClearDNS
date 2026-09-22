@@ -77,4 +77,4 @@
 - **去掉全部针对国内网络的优化**：Dockerfile 移除 ghfast.top（`GH_MIRROR` 默认空）、rsproxy cargo 源、npmmirror npm 源、清华 pip/apt 源，全部直连官方上游（`GOPROXY=https://proxy.golang.org,direct` / 官方 crates.io / npmjs / PyPI / deb.debian.org）；
 - `src/loader/default.c` 与 README 中 assets 下发地址恢复为直连 `raw.githubusercontent.com`；
 - 本地测试流程：仅用 1ms registry mirror（docker.1ms.run）加速拉取 Docker Hub 编译产物 → 部署 → 冒烟测试 → 记录文档；
-- 后续迭代默认遵循本流程，无需重复提醒。
+- 后续迭代默认遵循本流程，无需重复提醒。- 直连版构建验证（run 35704866039 全绿）：Docker Hub 拉取 `xiaoran05032/cleardns:latest`（198MB，17s 经 docker.1ms.run 加速）部署冒烟通过——ClearDNS v2.0.0-8-ge374fb2 / dnsproxy 0.84.2 / overture v2.0.9，五服务正常；国内组（阿里 DoH）、国外组（doh.ac0.top）、主入口 overture 分流解析全部正常。
