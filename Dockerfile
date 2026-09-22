@@ -89,7 +89,8 @@ WORKDIR /cleardns/bin/
 RUN cmake .. && make && strip cleardns
 RUN mv cleardns /tmp/
 
-# ---------------- 分流资源文件（仓库自动维护，直连） ----------------\nFROM ${DEBIAN} AS assets
+# ---------------- 分流资源文件（仓库自动维护，直连） ----------------
+FROM ${DEBIAN} AS assets
 ARG GH_MIRROR
 RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates xz-utils && rm -rf /var/lib/apt/lists/*
 RUN wget ${GH_MIRROR}https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt.xz
