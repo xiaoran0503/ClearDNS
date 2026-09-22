@@ -1,0 +1,65 @@
+# =====================================================================
+# ClearDNS Docker 镜像自动构建（AI 接手维护，v2.x 维护线）
+# - 触发：push master + 手动 dispatch（可选 tag 输入）
+# - 产物：docker.io/xiaoran05032/cleardns:latest（tag 输入时附加 :<tag>）
+# - 凭据：DOCKERHUB_USERNAME / DOCKERHUB_TOKEN（仓库 Secrets，不进代码库）
+# - 海外 runner 直连上游，GHA 层缓存加速增量构建
+# =====================================================================
+name: Docker Build
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - 'assets/**'
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - '.github/workflows/update-assets.yml'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '镜像 tag（留空仅推 latest）'
+        required: false
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: xiaoran05032/cleardns
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event.inputs.tag != '' }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          # 海外 runner：GitHub 直连 / Go 官方代理 / Debian 官方源
+          build-args: |
+            GH_MIRROR=
+            GOPROXY=https://proxy.golang.org,direct
+            APT_MIRROR=deb.debian.org
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
