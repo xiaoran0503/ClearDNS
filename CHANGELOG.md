@@ -71,3 +71,10 @@
 
 - GitHub Actions run 全步骤 success（Checkout / Docker Buildx / meta / Login / Build and push 全绿）；
 - 从 Docker Hub 拉取 `xiaoran05032/cleardns:latest`（198MB）并启动冒烟通过：ClearDNS v2.0.0-5-g0e649aa / dnsproxy 0.84.2 / overture v2.0.9，五服务正常；国内组（阿里 DoH）、国外组（doh.ac0.top）、主入口 overture 分流解析均正常。
+### 流程变更（用户拍板：全 CI 直连编译，本地不编译）
+
+- **所有编译统一在 GitHub Actions 完成**（push master 自动构建），本地不再编译；
+- **去掉全部针对国内网络的优化**：Dockerfile 移除 ghfast.top（`GH_MIRROR` 默认空）、rsproxy cargo 源、npmmirror npm 源、清华 pip/apt 源，全部直连官方上游（`GOPROXY=https://proxy.golang.org,direct` / 官方 crates.io / npmjs / PyPI / deb.debian.org）；
+- `src/loader/default.c` 与 README 中 assets 下发地址恢复为直连 `raw.githubusercontent.com`；
+- 本地测试流程：仅用 1ms registry mirror（docker.1ms.run）加速拉取 Docker Hub 编译产物 → 部署 → 冒烟测试 → 记录文档；
+- 后续迭代默认遵循本流程，无需重复提醒。

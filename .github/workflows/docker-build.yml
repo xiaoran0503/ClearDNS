@@ -59,10 +59,9 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          # 海外 runner：GitHub 直连 / Go 官方代理 / Debian 官方源
+          # 直连上游（海外 runner 无国内网络优化）
           build-args: |
             GH_MIRROR=
             GOPROXY=https://proxy.golang.org,direct
-            APT_MIRROR=deb.debian.org
           cache-from: type=gha
           cache-to: type=gha,mode=max

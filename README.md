@@ -64,13 +64,8 @@ ClearDNS 支持多种 DNS 协议，首先是常规 DNS ，即基于 UDP 或 TCP 
 
 + `chinalist.txt` ：`https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt`
 
-国内用户直接访问 GitHub 可能偏慢，建议使用以下镜像地址（ghfast.top 加速）：
+> 说明：自 v2.0.1 起，镜像构建与 assets 更新全部在 GitHub Actions 完成（直连上游，无国内网络优化）；镜像发布在 Docker Hub（`xiaoran05032/cleardns:latest`）。国内拉取镜像建议配置 registry mirror（如 docker.1ms.run）加速。
 
-+ `gfwlist.txt` ：`https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt`
-
-+ `china-ip.txt` ：`https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt`
-
-+ `chinalist.txt` ：`https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt`
 
 在 ClearDNS 的默认配置文件中，使用了本项目的分流资源作为更新上游，您可以修改配置，指向自定义资源（支持多个本地或远程文件），也可禁用更新。
 
@@ -140,9 +135,9 @@ foreign:
 assets:
   cron: "0 4 * * *"
   update:
-    gfwlist.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt
-    china-ip.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt
-    chinalist.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt
+    gfwlist.txt: https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt
+    china-ip.txt: https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt
+    chinalist.txt: https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt
 ```
 
 ### Port
@@ -314,10 +309,10 @@ assets:
   disable: false
   cron: "0 4 * * *"
   update:
-    gfwlist.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt
-    china-ip.txt: https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt
+    gfwlist.txt: https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt
+    china-ip.txt: https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt
     chinalist.txt:
-      - https://ghfast.top/https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt
+      - https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt
       - /tmp/chinalist-local.txt
       - demo.list  # aka ` {WorkDir}/assets/demo.list`
     custom.txt:
@@ -699,25 +694,24 @@ sys     0m0.005s
 ```
 
 ## 手动编译
+## 构建与发布（CI 自动完成）
 
-### 本地构建
+自 v2.0.1 起，本项目**所有编译均在 GitHub Actions 完成**（海外 runner 直连上游，无国内网络优化），本地不再编译：
+
+1. push 到 `master` 自动触发 [docker-build](.github/workflows/docker-build.yml)：构建并推送 `xiaoran05032/cleardns:latest` 至 Docker Hub；
+2. 每天 04:00 UTC [update-assets](.github/workflows/update-assets.yml) 自动更新分流资源并提交回仓库；
+3. 手动构建指定版本：GitHub 仓库 `Actions` 页 → `Docker Build` → `Run workflow` → 填写 tag。
+
+### 本地部署测试（仅拉取镜像，不编译）
+
+国内拉取镜像建议先配置 registry mirror（如 docker.1ms.run），再运行：
 
 ```bash
-  git clone https://github.com/xiaoran0503/ClearDNS.git
-  cd ./ClearDNS/
-  docker build -t cleardns .
-```
-
-### 交叉构建
-
-```bash
-  git clone https://github.com/xiaoran0503/ClearDNS.git
-  cd ./ClearDNS/
-  docker buildx build \
-    -t dnomd343/cleardns \
-    -t ghcr.io/dnomd343/cleardns \
-    -t registry.cn-shenzhen.aliyuncs.com/dnomd343/cleardns \
-    --platform="linux/amd64,linux/arm64" . --push
+  docker pull xiaoran05032/cleardns:latest
+  docker run -dt --name cleardns --restart=unless-stopped \\
+    -v /path/to/cleardns:/cleardns \\
+    -p 53:53/udp -p 5353:5353/udp \\
+    xiaoran05032/cleardns:latest
 ```
 
 ## 许可证
