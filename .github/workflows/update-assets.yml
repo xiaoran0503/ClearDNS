@@ -35,9 +35,9 @@ jobs:
       - name: Compress assets
         working-directory: assets
         run: |
-          xz -9 -k gfwlist.txt
-          xz -9 -k china-ip.txt
-          xz -9 -k chinalist.txt
+          xz -f -9 -k gfwlist.txt
+          xz -f -9 -k china-ip.txt
+          xz -f -9 -k chinalist.txt
 
       - name: Commit and push
         run: |
