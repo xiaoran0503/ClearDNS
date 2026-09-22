@@ -78,3 +78,27 @@
 - `src/loader/default.c` 与 README 中 assets 下发地址恢复为直连 `raw.githubusercontent.com`；
 - 本地测试流程：仅用 1ms registry mirror（docker.1ms.run）加速拉取 Docker Hub 编译产物 → 部署 → 冒烟测试 → 记录文档；
 - 后续迭代默认遵循本流程，无需重复提醒。- 直连版构建验证（run 35704866039 全绿）：Docker Hub 拉取 `xiaoran05032/cleardns:latest`（198MB，17s 经 docker.1ms.run 加速）部署冒烟通过——ClearDNS v2.0.0-8-ge374fb2 / dnsproxy 0.84.2 / overture v2.0.9，五服务正常；国内组（阿里 DoH）、国外组（doh.ac0.top）、主入口 overture 分流解析全部正常。
+## v2.0.2 (2026-09-22) — 代码审查问题修复（AI 评估处置）
+
+根据代码审查报告（WorkBuddy 2026-09-22）逐项核实后修复以下真实问题：
+
+### 修复（核实属实）
+
+- **S2 信号标志类型**（`src/utils/process.c`）：`EXITED/EXITING` 由 `uint8_t` 改为 `volatile sig_atomic_t`，避免信号处理器与主循环共享标志的寄存器缓存与原子性问题（`while(!EXITED) pause()` 可能永远读不到更新）；
+- **S3 子进程退出事件丢失**（`src/utils/process.c`）：SIGCHLD 处理器去掉 `return`，一次信号到达时扫描并重启全部已退出进程（此前多进程同时退出只重启第一个，其余静默死亡）；重启节流 `sleep(RESTART_DELAY)` 由单次改为整批一次；
+- **N2 配置根节点未校验**（`src/loader/parser.c`）：`cleardns_parser` 增加 `cJSON_IsObject` 根节点校验，避免根为数组/标量时 `strcmp(NULL, ...)` 段错误；
+- **N7 错误文案不符**（`src/loader/parser.c`）：`adguard`/`assets` 两处 `"must be array"` 改为 `"must be object"`（实际校验为 object）；
+- **N5 system() 退出码解析**（`src/common/system.c`）：`/256` 改为标准 `WIFEXITED/WEXITSTATUS`，并处理 `system()` 返回 -1（fork 失败）的情况。
+
+### 评估后不修复（附理由）
+
+- **N1 AdGuardHome 明文密码日志**：用户指示不处理；debug 日志默认不输出；
+- **S1 信号处理器调用非 async-signal-safe 函数**：完整修复需 self-pipe/signalfd 专项重构守护进程核心逻辑，改动风险高于收益；本次 S2/S3 精简已显著降低触发概率，专项重构留档后续评估；
+- **N4 pgrep 杀全部 overture 实例**：容器隔离场景影响有限，且改动需跨模块传 PID，收益低；
+- **N6 malloc 无 NULL 检查**：系统性补齐成本高，OOM 场景 log_fatal 已兜底多数路径；
+- **N8 shell cat 追加文件**：参数均为编译期常量无注入风险；
+- **O8 bin/ 与 src/target/ 混入仓库**：误报，`.gitignore` 已含 `/bin/`、`/src/target/`，未跟踪。
+
+### 验证
+
+- 代码改动经 GitHub Actions 全量构建（无国内优化直连版）；构建成功后按流程 1ms 拉取镜像部署冒烟测试。

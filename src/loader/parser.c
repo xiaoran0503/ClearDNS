@@ -95,7 +95,7 @@ void diverter_parser(diverter_config *config, cJSON *json) { // diverter options
 
 void adguard_parser(adguard_config *config, cJSON *json) { // adguard options parser
     if (!cJSON_IsObject(json)) {
-        log_fatal("`adguard` must be array");
+        log_fatal("`adguard` must be object");
     }
     json = json->child;
     while (json != NULL) {
@@ -119,7 +119,7 @@ void adguard_parser(adguard_config *config, cJSON *json) { // adguard options pa
 
 void assets_parser(assets_config *config, cJSON *json) { // assets options parser
     if (!cJSON_IsObject(json)) {
-        log_fatal("`assets` must be array");
+        log_fatal("`assets` must be object");
     }
     json = json->child;
     while (json != NULL) {
@@ -151,6 +151,9 @@ void cleardns_parser(cleardns_config *config, const char *config_content) { // J
     cJSON *json = cJSON_Parse(config_content);
     if (json == NULL) {
         log_fatal("ClearDNS configure format error");
+    }
+    if (!cJSON_IsObject(json)) {
+        log_fatal("ClearDNS configure root must be an object");
     }
     json = json->child;
     while (json != NULL) {

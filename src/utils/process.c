@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/prctl.h>
@@ -16,8 +17,8 @@
 
 process **process_list;
 
-uint8_t EXITED = FALSE;
-uint8_t EXITING = FALSE;
+volatile sig_atomic_t EXITED = FALSE;   // shared with signal handlers
+volatile sig_atomic_t EXITING = FALSE;  // shared with signal handlers
 
 void get_sub_exit();
 void get_exit_signal();
@@ -159,6 +160,7 @@ void get_sub_exit() { // catch child process exit
         return;
     }
     int status;
+    int restarted = FALSE;
     log_debug("Start handle SIGCHLD");
     for (process **proc = process_list; *proc != NULL; ++proc) {
         if ((*proc)->pid == 0) {
@@ -172,11 +174,13 @@ void get_sub_exit() { // catch child process exit
             char *exit_msg = get_exit_msg(status);
             log_warn("%s (PID = %d) -> %s", (*proc)->name, (*proc)->pid, exit_msg);
             free(exit_msg);
-            sleep(RESTART_DELAY); // reduce restart frequency
-            process_exec(*proc);
+            process_exec(*proc); // restart died process
             log_info("%s restart complete", (*proc)->name);
-            return; // skip following check
+            restarted = TRUE; // continue scanning remaining processes
         }
+    }
+    if (restarted) {
+        sleep(RESTART_DELAY); // reduce restart frequency (once per batch)
     }
     int wait_ret = waitpid(-1, &status, WNOHANG); // waitpid for all sub-process (non-blocking)
     if (wait_ret == -1) {
