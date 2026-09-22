@@ -2,6 +2,7 @@
 #define _GNU_SOURCE // NOLINT
 #endif
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -167,6 +168,13 @@ void get_sub_exit() { // catch child process exit
             continue; // skip not running process
         }
         int wait_ret = waitpid((*proc)->pid, &status, WNOHANG); // non-blocking wait
+        if (wait_ret == -1 && errno == ECHILD) { // started process already reaped
+            log_warn("%s (PID = %d) already reaped -> restart", (*proc)->name, (*proc)->pid);
+            process_exec(*proc); // restart reaped process
+            log_info("%s restart complete", (*proc)->name);
+            restarted = TRUE;
+            continue;
+        }
         if (wait_ret == -1) { // process wait error
             log_perror("%s waitpid error -> ", (*proc)->name);
             server_exit(EXIT_WAIT_ERROR);
