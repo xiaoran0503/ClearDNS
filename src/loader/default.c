@@ -25,21 +25,19 @@ domestic:\n\
   port: 4053\n\
   bootstrap: 223.5.5.5\n\
   primary:\n\
-    - tls://dns.alidns.com\n\
-    - https://doh.pub/dns-query\n\
+    - https://dns.alidns.com/dns-query\n\
   fallback:\n\
+    - 223.5.5.5\n\
     - 223.6.6.6\n\
-    - 119.29.29.29\n\
 \n\
 foreign:\n\
   port: 6053\n\
   bootstrap: 8.8.8.8\n\
   primary:\n\
-    - tls://dns.google\n\
-    - https://dns.cloudflare.com/dns-query\n\
+    - https://doh.ac0.top/google-query\n\
   fallback:\n\
+    - 8.8.8.8\n\
     - 1.1.1.1\n\
-    - 8.8.4.4\n\
 \n\
 assets:\n\
   cron: \"0 4 * * *\"\n\
