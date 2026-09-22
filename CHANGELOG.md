@@ -54,3 +54,20 @@
 - `cmake_minimum_required` 全部升级至最新稳定版 4.2（构建环境为 pip 安装的最新 CMake / WSL 4.2.3）；
 - 新增 `.dockerignore` 排除本地 `bin/` 构建产物，避免 CMakeCache 路径污染容器构建；
 - Docker 镜像完整构建验证通过：cleardns v2.0.0-1-gb0e3e08 / dnsproxy 0.84.2 / overture v2.0.9 / AdGuardHome v0.107.79，最终运行时 Debian 13 (trixie)，UPX 压缩后四件套齐备；镜像内冒烟测试 DNS 服务正常起停、assets 三列表加载成功。
+
+## v2.0.1 (2026-09-22) — Docker Hub 自动构建 CI
+
+### 新增
+
+- 新增 `.github/workflows/docker-build.yml`：push master 自动构建并推送镜像至 Docker Hub（`xiaoran05032/cleardns:latest`），支持 `workflow_dispatch` 手动触发并附加指定 tag；
+- Docker Hub 凭据通过仓库 Secrets（`DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`）注入，不进入代码库；
+- 海外 runner 直连上游：`GH_MIRROR=` 空（GitHub 直连）、`GOPROXY=https://proxy.golang.org,direct`、`APT_MIRROR=deb.debian.org`；启用 `type=gha` 构建缓存加速增量构建。
+
+### 修复
+
+- checkout 改为 `fetch-depth: 0`：Dockerfile cleardns 阶段 `git describe --tags` 取版本号依赖完整历史与 tags，浅克隆会报 `Unable to get version information` 导致 CMake 配置失败。
+
+### 验证
+
+- GitHub Actions run 全步骤 success（Checkout / Docker Buildx / meta / Login / Build and push 全绿）；
+- 从 Docker Hub 拉取 `xiaoran05032/cleardns:latest`（198MB）并启动冒烟通过：ClearDNS v2.0.0-5-g0e649aa / dnsproxy 0.84.2 / overture v2.0.9，五服务正常；国内组（阿里 DoH）、国外组（doh.ac0.top）、主入口 overture 分流解析均正常。
