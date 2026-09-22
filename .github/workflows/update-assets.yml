@@ -32,6 +32,14 @@ jobs:
           ./china-ip.py
           ./chinalist.py
 
+      - name: Validate assets
+        working-directory: assets
+        run: |
+          wc -l gfwlist.txt china-ip.txt chinalist.txt
+          test "$(wc -l < gfwlist.txt)" -ge 5000 || { echo "ERROR: gfwlist.txt too small (empty upstream?)"; exit 1; }
+          test "$(wc -l < china-ip.txt)" -ge 500  || { echo "ERROR: china-ip.txt too small (empty upstream?)"; exit 1; }
+          test "$(wc -l < chinalist.txt)" -ge 5000 || { echo "ERROR: chinalist.txt too small (empty upstream?)"; exit 1; }
+
       - name: Compress assets
         working-directory: assets
         run: |

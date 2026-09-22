@@ -80,7 +80,7 @@ RUN mv ./target/release/*.a /tmp/
 # ---------------- ClearDNS 主程序（动态链接 glibc，cmake 最新稳定版） ----------------
 FROM ${DEBIAN} AS cleardns
 RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev git make ca-certificates python3-pip && \
-    pip3 install --no-cache-dir --break-system-packages cmake && \
+    pip3 install --no-cache-dir --break-system-packages 'cmake>=4.2,<5' && \
     rm -rf /var/lib/apt/lists/*
 COPY ./ /cleardns/
 COPY --from=rust-mods /tmp/libassets.a /cleardns/src/target/release/

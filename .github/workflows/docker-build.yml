@@ -7,6 +7,10 @@
 # =====================================================================
 name: Docker Build
 
+concurrency:
+  group: docker-build
+  cancel-in-progress: true
+
 on:
   push:
     branches: [master]

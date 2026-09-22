@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
+import subprocess
+import sys
 from netaddr import IPSet
 from netaddr import IPAddress
 from netaddr import IPNetwork
@@ -9,15 +10,25 @@ from netaddr import IPNetwork
 operators = ['china', 'cmcc', 'chinanet', 'unicom', 'tietong', 'cernet', 'cstnet', 'drpeng', 'googlecn']
 operators += ['%s6' % x for x in operators]  # add `...6` suffix
 source = [
-    'curl -sL https://github.com/misakaio/chnroutes2/raw/master/chnroutes.txt | sed \'/^#/d\'',
-    'curl -sL https://github.com/metowolf/iplist/raw/master/data/special/china.txt',
-    'curl -sL https://github.com/17mon/china_ip_list/raw/master/china_ip_list.txt',
-] + ['curl -sL https://gaoyifan.github.io/china-operator-ip/%s.txt' % x for x in operators]
+    'curl -sfL https://github.com/misakaio/chnroutes2/raw/master/chnroutes.txt | sed \'/^#/d\'',
+    'curl -sfL https://github.com/metowolf/iplist/raw/master/data/special/china.txt',
+    'curl -sfL https://github.com/17mon/china_ip_list/raw/master/china_ip_list.txt',
+] + ['curl -sfL https://gaoyifan.github.io/china-operator-ip/%s.txt' % x for x in operators]
 
 ipAddrs = set()
+failed = 0
 for script in source:  # traverse fetch commands
-    raw = os.popen(script).read().split('\n')
+    proc = subprocess.run(script, shell=True, capture_output=True, text=True)
+    if proc.returncode != 0:  # source fetch failed (curl -f or pipeline error)
+        failed += 1
+        print('[warn] source failed: %s' % script[:80], file=sys.stderr)
+        continue
+    raw = proc.stdout.split('\n')
     ipAddrs.update(filter(None, raw))
+if not ipAddrs:  # all sources failed -> refuse to write empty asset
+    sys.exit('ERROR: all %d sources failed, refuse to write empty china-ip.txt' % len(source))
+if failed:
+    print('[warn] %d/%d sources failed' % (failed, len(source)), file=sys.stderr)
 
 ipv4 = IPSet()
 ipv6 = IPSet()

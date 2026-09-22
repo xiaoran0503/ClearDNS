@@ -20,8 +20,10 @@ process **process_list;
 
 volatile sig_atomic_t EXITED = FALSE;   // shared with signal handlers
 volatile sig_atomic_t EXITING = FALSE;  // shared with signal handlers
+volatile sig_atomic_t CHILD_EXIT = FALSE; // set by SIGCHLD handler, handled in main loop
 
 void get_sub_exit();
+void reap_sub_exit();
 void get_exit_signal();
 char* get_exit_msg(int status);
 void server_exit(int exit_code);
@@ -107,10 +109,23 @@ void process_list_run() { // start process list
     log_info("Process start complete");
 }
 
-void process_list_daemon() {
+void process_list_daemon() { // daemon all process in main loop
+    sigset_t block_mask, empty_mask;
+    sigemptyset(&empty_mask);
+    sigemptyset(&block_mask);
+    sigaddset(&block_mask, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &block_mask, NULL); // block SIGCHLD while checking flag
     while (!EXITED) {
-        pause();
+        if (CHILD_EXIT) { // handle child exit out of signal context
+            CHILD_EXIT = FALSE;
+            sigprocmask(SIG_UNBLOCK, &block_mask, NULL); // keep child signal mask clean
+            reap_sub_exit();
+            sigprocmask(SIG_BLOCK, &block_mask, NULL);
+            continue;
+        }
+        sigsuspend(&empty_mask); // atomically unblock and wait for signal
     }
+    sigprocmask(SIG_UNBLOCK, &block_mask, NULL);
 }
 
 char* get_exit_msg(int status) { // get why the child process death
@@ -155,7 +170,11 @@ void get_exit_signal() { // get SIGINT or SIGTERM signal
     server_exit(EXIT_NORMAL); // normally exit
 }
 
-void get_sub_exit() { // catch child process exit
+void get_sub_exit() { // catch child process exit (async-signal-safe: only set flag)
+    CHILD_EXIT = TRUE;
+}
+
+void reap_sub_exit() { // handle child process exit in the main flow
     if (EXITING) {
         log_debug("Skip handle SIGCHLD");
         return;

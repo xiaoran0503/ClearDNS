@@ -56,7 +56,8 @@ void load_default_config(const char *config_file) {
     char *config_content = NULL;
     if (is_json_suffix(config_file)) { // convert to json format
         config_content = to_json_format(DEFAULT_CONFIG);
-    } else {
+    }
+    if (config_content == NULL) { // conversion failed (or plain YAML path)
         config_content = strdup(DEFAULT_CONFIG);
     }
     save_file(config_file, config_content);

@@ -121,3 +121,30 @@
 
 - 代码经 GitHub Actions 直连构建；构建成功后 1ms 拉取镜像部署冒烟（含子进程 kill -9 自动重启验证）。- v2.0.3 构建（run 6 / 35709014957 全绿）经 1ms 拉取部署冒烟通过：ClearDNS v2.0.0-12-ga5dab0c / dnsproxy 0.84.2 / overture v2.0.9；国内组/国外组/主入口分流解析全部正常。
 - **崩溃重启实测**：连续两轮 `kill -9` overture / domestic dnsproxy / foreign dnsproxy，全部自动重启成功（19→80→162、17→114、18→195），全程无 `waitpid error`（旧代码此场景会致命退出）；容器日志确认整体退出仅由外部 SIGTERM 触发（`Get exit signal` 正常路径），`--restart` 策略自动拉起，服务无残留故障。
+## v2.0.4 (2026-09-22) — 第三轮审阅处置（SIGCHLD 重构 + 构建链加固）
+
+第三轮审阅报告（WorkBuddy 第三轮）经真实源码编译运行复现新严重缺陷，连同构建/发布链问题一并处置：
+
+### 修复（核实属实，已采纳）
+
+- **P0 首个组件崩溃循环导致全部组件不启动**（`src/utils/process.c`）：SIGCHLD 处理器原在主流程之外执行整套重启工作（含 `sleep(1)` 节流），处理器被反复重入、主流程 `pause()` 被饿死——进程列表中**第一个**组件秒死时，其后组件（真实映射即 Domestic dnsproxy 崩溃 → Foreign/overture/crond/AdGuardHome 全部起不来）永不启动，服务整体不可用。审阅沙箱对照实验：修复前 B/C 启动 0 次，修复后各 1 次。
+  - 修复（信号处理器异步安全化 + 主循环接管）：新增 `CHILD_EXIT` 标志，`get_sub_exit()` 只置标志；新增 `reap_sub_exit()`（原处理器函数体原样迁移），由 `process_list_daemon()` 主循环在 **SIGCHLD 阻塞态**下检查标志、**解除阻塞态**下执行重启（避免 `fork` 让子进程继承阻塞掩码——crond 等自 fork 组件将无法获知子进程结束），`sigsuspend` 原子等待不丢事件；ECHILD 幽灵槽位守卫（v2.0.3）原样保留。
+  - 权衡（审阅明示，已接受）：重启动作从信号处理器移至主循环，最长延迟毫秒级；`cleardns.c` 首次资源更新（SIGALRM 处理器内同步执行，最多数分钟）期间子进程死亡待处理、更新结束后重启——行为回退量级为一次资源更新时间，属可接受权衡。
+  - 验证：审阅沙箱三场景（A 崩溃循环+B/C 长驻 / 全正常 / 全崩溃循环）+ 子进程信号掩码检查（SigBlk 全 0）全部通过，`-std=gnu99 -Wall -Wextra -Werror` 编译零警告；本机语法级编译复核通过。
+- **B4 资源更新缺数据质量闸门**（`assets/*.py` + `.github/workflows/update-assets.yml`）：三个脚本用 `os.popen('curl -sL')` 抓取上游，curl 静默失败不产生非零退出码，空内容会被写文件并无条件提交推送 → Dockerfile assets 阶段打包空分流表发布给所有用户。
+  - 修复：脚本改用 `subprocess.run` 检查返回码 + `curl -sfL`（HTTP 错误返回非零），源失败计数告警、**全部源失败则拒绝写空文件并退出非零**；workflow 新增 Validate assets 步骤（gfwlist ≥ 5000 行 / china-ip ≥ 500 行 / chinalist ≥ 5000 行，不达标 fail，阻断提交）。
+- **B3 构建硬依赖 git 元数据**（`CMakeLists.txt`）：源码压缩包（无 `.git`）或仓库无 tag 时 `git describe` 失败即 `FATAL_ERROR`；改为失败回退 `VERSION="unknown"` + warning，仅 CI 环境要求 git describe。
+- **B8 默认配置生成空指针**（`src/loader/default.c`）：`.json` 后缀路径下 `to_json_format()` 可能返回 NULL 导致 `fputs(NULL, fp)`；增加 NULL 检查并回退写入 YAML 原文。
+- **B5 构建上下文污染**（`.dockerignore`）：补 `src/target`（Rust 本地产物不再进构建上下文）。
+- **B7 并发构建竞态**（`.github/workflows/docker-build.yml`）：新增 `concurrency: {group: docker-build, cancel-in-progress: true}`，连续 push 不再并发构建竞相推送 latest。
+- **B2 工具链未锁定**（`Dockerfile`）：`pip3 install cmake` 未锁版本，未来装出 3.x 会导致 CI 失败；改为 `'cmake>=4.2,<5'`（保持 4.x 下限可复现）。说明：项目 CMakeLists 使用指令均为 3.x 既有 API，`cmake_minimum_required(VERSION 4.2)` 即启用 CMake 4.x 策略集，无需为用而用引入冗余特性。
+
+### 评估后不修复（附理由）
+
+- **B1 默认配置隐私/凭据**：`doh.ac0.top` 为维护者私有 DoH——用户指定选用，不更换；默认口令 `admin/cleardns` 与 AdGuardHome 监听 0.0.0.0:80——用户指示密码明文问题不处理（默认仅限内网部署场景，README 已说明可改）。
+- **B6 其余项**：上游源码无校验和（供应链加固留档）；Header.css 按 DOM 顺序隐藏导航项（低概率，升级 AdGuardHome 时纳入检查清单）；UPX 壳在强化内核下可能拒绝加载（低概率，镜像冒烟已覆盖可启动断言）。
+
+### 验证
+
+- 本机 WSL：`process.c` / `default.c` / `assets.c` 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译零警告零错误；三个 assets 脚本 `py_compile` 通过。
+- 推送后经 GitHub Actions 直连构建，1ms 拉取镜像部署：**容器级复现验证**——将 Domestic 组 `dnsproxy` 替换为秒死脚本模拟"首个组件崩溃循环"，确认修复后 Foreign / overture / crond / AdGuardHome 仍被拉起、`Process start complete` 出现；随后恢复真实二进制冒烟解析。
