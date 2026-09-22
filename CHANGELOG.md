@@ -119,4 +119,5 @@
 
 ### 验证（CI 流程）
 
-- 代码经 GitHub Actions 直连构建；构建成功后 1ms 拉取镜像部署冒烟（含子进程 kill -9 自动重启验证）。
+- 代码经 GitHub Actions 直连构建；构建成功后 1ms 拉取镜像部署冒烟（含子进程 kill -9 自动重启验证）。- v2.0.3 构建（run 6 / 35709014957 全绿）经 1ms 拉取部署冒烟通过：ClearDNS v2.0.0-12-ga5dab0c / dnsproxy 0.84.2 / overture v2.0.9；国内组/国外组/主入口分流解析全部正常。
+- **崩溃重启实测**：连续两轮 `kill -9` overture / domestic dnsproxy / foreign dnsproxy，全部自动重启成功（19→80→162、17→114、18→195），全程无 `waitpid error`（旧代码此场景会致命退出）；容器日志确认整体退出仅由外部 SIGTERM 触发（`Get exit signal` 正常路径），`--restart` 策略自动拉起，服务无残留故障。
