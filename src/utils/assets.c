@@ -124,11 +124,18 @@ void extract(const char *file) { // extract one asset file from `.tar.xz` file
     }
     free(output_file);
 
-    char *extract_cmd = string_load("tar xf %s %s -C %s", ASSETS_PKG, file, ASSETS_DIR);
+    char *extract_cmd = string_load("tar xf %s -C %s %s", ASSETS_PKG, ASSETS_DIR, file);
     if (run_command(extract_cmd)) {
         log_warn("Extract asset `%s` failed", file);
-    } else {
-        log_info("Extract asset `%s` success", file);
+        free(extract_cmd);
+        return;
     }
+    char *verify_file = string_join(ASSETS_DIR, file);
+    if (is_file_exist(verify_file)) {
+        log_info("Extract asset `%s` success", file);
+    } else {
+        log_warn("Extract asset `%s` verify failed", file);
+    }
+    free(verify_file);
     free(extract_cmd);
 }

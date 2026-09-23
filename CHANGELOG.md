@@ -175,3 +175,30 @@
   - `AdGuardHome.yaml` 生成 `cache_size: 4194304` / `cache_optimistic: true`（4MiB + 乐观缓存注入成功，含 AdGuardHome 默认 `cache_optimistic_answer_ttl: 30s` 等优化字段）；
   - `foreign.json` upstream 确认 `doh.18bit.cn/dns-query`（国外组 google 返回 216.239.38.120，新上游生效）；
   - 国内组（阿里 DoH）、国外组（doh.18bit.cn）、主入口分流解析全部正常。
+
+
+## v2.0.6 (2026-09-23) — 修复 assets 解压错位（分流文件长期为空）
+
+### 背景
+
+用户核查成品镜像时发现 `china-ip.txt` / `chinalist.txt` / `gfwlist.txt` 出现在 `/cleardns/` 顶层（与 `cleardns.yml` 平级），而 `/cleardns/assets/` 目录为空。
+
+### 根因
+
+`src/utils/assets.c` 的 `extract()` 解压命令为：
+
+```
+tar xf /assets.tar.xz <file> -C /cleardns/assets/
+```
+
+`-C` 位于归档成员参数**之后**，GNU tar 在此调用形式下不切换目录，三个文件被解压到进程当前工作目录 `/cleardns/`（而非 `/cleardns/assets/`）。`extract()` 仅以 `tar` 退出码判断成功（退出码 0），**假成功**；随后 `load_diverter_assets()` 的 `file_append` 因源文件不存在复制失败，`/etc/cleardns/*.txt` 全部为 0 字节 —— overture 加载的空分流列表，**gfwlist / chinalist / china-ip 分流自 v2.0.0 起实际未生效**（未匹配域名全部落入 domestic 组兜底）。
+
+### 修复
+
+- `extract()`：`-C` 移到归档成员之前：`tar xf /assets.tar.xz -C /cleardns/assets/ <file>`；
+- 解压后增加存在性校验（`is_file_exist`），失败不再报 success，输出 `verify failed` 告警（避免内存泄漏）。
+
+### 验证
+
+- `assets.c` 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译零警告；
+- 推送后 CI 构建，1ms 拉取部署：`/cleardns/assets/` 三个文件存在且非空、`/etc/cleardns/*.txt` 与 assets 内容一致（非 0 字节）、gfwlist/chinalist 分流真实生效。
