@@ -1261,6 +1261,7 @@ chinalawtranslate.com
 chinamule.com
 chinamz.org
 chinanewscenter.com
+chinanewsx.com
 chinapost.com.tw
 chinapress.com.my
 chinarightsia.org
@@ -2254,7 +2255,6 @@ fireofliberty.info
 fireofliberty.org
 firetweet.io
 firstfivefollowers.com
-firstory.io
 firstpost.com
 firstrade.com
 fish.audio
@@ -3588,6 +3588,7 @@ io.google
 iopenmall.tw
 iownyour.biz
 iownyour.org
+ipaddress.my
 ipalter.com
 ipdefenseforum.com
 ipfire.org
@@ -4480,7 +4481,6 @@ musixmatch.com
 muslimvideo.com
 muzi.com
 muzi.net
-muzmi.org
 muzu.tv
 mvg.jp
 mx981.com
@@ -4747,6 +4747,7 @@ nordstromimage.com
 nordstrommedia.com
 nordstromrack.com
 nordvpn.com
+nordwangluo.com
 nos.nl
 nostr.build
 nostr.land
@@ -5351,6 +5352,7 @@ pureconcepts.net
 pureinsight.org
 purepdf.com
 purevpn.com
+purevpn.com.tw
 purplelotus.org
 purpose.nike.com
 pursuestar.com
@@ -6973,6 +6975,7 @@ vanpeople.com
 vansky.com
 vaticannews.va
 vatn.org
+vava8.com
 vcf-online.org
 vcfbuilder.org
 vct.news
@@ -7427,6 +7430,7 @@ www1.american.edu
 www1.biz
 www2.ohchr.org
 www2.rocketbbs.com
+www3.nhk.or.jp
 wxw.cat
 wxw.moe
 wzyboy.im
@@ -7456,7 +7460,6 @@ xcritic.com
 xda-developers.com
 xdaforums.com
 xerotica.com
-xfiles.to
 xfinity.com
 xfm.pp.ru
 xfxssr.me
