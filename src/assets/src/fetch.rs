@@ -46,6 +46,11 @@ async fn http_fetch(url: &str, timeout: u64) -> Result<Vec<String>, String> {
         .timeout(Duration::from_secs(timeout))
         .send().await {
         Ok(response) => {
+            // reqwest does not treat 4xx/5xx as errors by default;
+            // an error-page body must not be written into the asset files.
+            if !response.status().is_success() {
+                return Err(format!("http status not success: {}", response.status()));
+            }
             match response.text().await {
                 Ok(text) => {
                     debug!("Remote file `{}` download success", url);

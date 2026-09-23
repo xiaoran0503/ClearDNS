@@ -103,11 +103,17 @@ pub async unsafe extern "C" fn asset_update(
                 .write(true)
                 .create(true)
                 .truncate(true)
-                .open(&file) { // open target file
+                .open(format!("{}.tmp", file)) { // atomic write: tmp file then rename
                 Ok(mut fp) => {
                     match fp.write_all(content.as_ref()) {
                         Err(err) => warn!("File `{}` save error: {}", file, err),
-                        _ => debug!("File `{}` save success", file),
+                        _ => {
+                            if let Err(err) = std::fs::rename(format!("{}.tmp", file), &file) {
+                                warn!("File `{}` rename error: {}", file, err);
+                            } else {
+                                debug!("File `{}` save success", file);
+                            }
+                        }
                     }
                 },
                 Err(err) => warn!("File `{}` open failed: {}", file, err),

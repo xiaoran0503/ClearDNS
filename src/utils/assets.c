@@ -101,7 +101,7 @@ void assets_update_entry() { // receive SIGALRM for update all assets
     load_diverter_assets(); // load assets data into `WORK_DIR`
 
     log_info("Restart overture to apply new assets");
-    run_command("pgrep overture | xargs kill"); // restart overture
+    run_command("pgrep overture | xargs -r kill"); // -r: skip run when pgrep matches nothing (avoid bare `kill` usage noise)
     log_info("Assets update complete");
 }
 

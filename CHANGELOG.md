@@ -261,3 +261,38 @@ tar xf /assets.tar.xz <file> -C /cleardns/assets/
 
 - 本地直连实测脚本：8 个组件全部解析成功且判定"✅ 最新"，输出 Markdown 表格正常；
 - 推送后触发 workflow_dispatch 两轮：首轮触发暴露"全部最新时仍尝试创建空 issue（HTTP 410）"→ 修复为无更新项时直接跳过 issue 创建；第二轮（run #3，head 78fa0d8）**CI 全绿**，核查表格正常输出到 job summary，且未创建任何 issue（无更新时行为正确）。
+- 本地直连实测脚本：8 个组件全部解析成功且判定"✅ 最新"，输出 Markdown 表格正常；
+- 推送后触发 workflow_dispatch 两轮：首轮触发暴露"全部最新时仍尝试创建空 issue（HTTP 410）"→ 修复为无更新项时直接跳过 issue 创建；第二轮（run #3，head 78fa0d8）**CI 全绿**，核查表格正常输出到 job summary，且未创建任何 issue（无更新时行为正确）。
+
+
+## v2.0.10 (2026-09-23) — 第五轮审阅报告修复（A1–A9）
+
+### 背景
+
+第五轮审阅报告（基线 v2.0.8 @ `6c2de78`）列出 A1–A10 问题。**逐项对照源码核实后**修复 A1–A9，A10 维持搁置（见下）。
+
+### 变更
+
+| 编号 | 问题（核实结论） | 修复 |
+| --- | --- | --- |
+| A1 · P0 | crontab 无尾随换行 + 0644 → vixie-cron 判损坏整份忽略，**每日资源更新从未执行**（启动时 `kill(SIGALRM)` 掩盖；`update-assets.yml` 生成的新分流表永不落地） | `crontab_load()`：cron 表达式补 `\n`，写盘后 `chmod 0600` + `chown root:root` |
+| A1.7 | 容器 cron 与 GHA `update-assets` 同为 04:00 UTC，可能撞生成窗口 | `UPDATE_CRON` 改 `"0 5 * * *"` |
+| A2 · P2 | `dns.bind_host`（单数）为 v0.106 前字段，v0.107.79 只认 `bind_hosts` 数组（镜像内实测键被丢弃，无功能影响但将来绑定失效） | 首启注入改为 `bind_hosts: ["0.0.0.0"]` |
+| A3 · P1 | `fetch.rs` 不校验 HTTP 状态码，4xx/5xx 错误页正文会经 `asset_tidy` 覆盖写盘（与构建期 `curl -sfL` 闸门不对称） | `http_fetch()` 显式 `response.status().is_success()` 校验，非 2xx 返回 Err |
+| A3b · P2 | `ffi.rs` 直接 `truncate` 写目标文件，SIGTERM 打断留半截分流表，且 `extract()` "存在即跳过" 导致坏数据长期留存 | 改为写 `*.tmp` 后 `rename` 原子替换 |
+| A4 · P2 | `cJSON_free()` 只释放单节点：`parser.c` 循环后释放 NULL（配置树全量泄漏）、`adguard.c` 只释放根节点（子树泄漏） | 两处改 `cJSON_Delete()`（递归释放）；`parser.c` 保留 root 指针 |
+| A5 · P2 | v2.0.8 起 `users` 仅首启写入，已存在配置时 `cleardns.yml` 账号口令修改**静默失效** | 已存在配置分支增加 `bcrypt_verify` 一致性检查，不一致时 `log_warn` 提示（维持"网页端优先"拍板，不强制覆盖） |
+| A6 · P2 | `adguard_config_ret`（`cJSON_Print` 堆串）从未释放 | `save_file` 后 `free` |
+| A7 · P2 | `parser.c` 覆盖 `config->cron` 前未释放 `config_init()` 的 `strdup(UPDATE_CRON)` | 赋值前 `free(config->cron)` |
+| A8 · P3 | `log_perror()` 缺 `va_end(ap)`（与 `log_printf` 不对称） | 补 `va_end(ap)` |
+| A9 · P3 | `pgrep overture | xargs kill`：pgrep 无匹配时 xargs 无参执行 `kill` 产生 usage 噪音 | 改 `xargs -r kill` |
+
+### 不修（记录为已知风险）
+
+- **A10 · P3**：SIGALRM 处理器内执行 Rust FFI + `system()`，非 async-signal-safe（S1 重构的扩展路径）。**维持搁置**——用户此前已拍板搁置 S1 信号处理器重构，风险已稳定运行多轮且重构涉及主循环架构，收益/风险比不划算，继续记录。
+
+### 验证
+
+- 改动 5 个 C 文件（`crontab.c`/`adguard.c`/`parser.c`/`logger.c`/`assets.c`）在 WSL 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译**零警告**；
+- Rust 侧（`fetch.rs`/`ffi.rs`）改动交由 CI 全量编译验证；
+- 推送后 CI 构建 + 1ms 拉取部署冒烟：cron 文件 0600 带尾换行、每日 05:00 触发、AdGuardHome.yaml 生成 `bind_hosts`、功能解析正常（见验证记录）。

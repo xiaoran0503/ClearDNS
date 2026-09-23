@@ -59,4 +59,5 @@ void log_perror(const char *fmt, ...) {
     vfprintf(stderr, fmt, ap); // output log content
     fflush(stderr);
     perror("");
+    va_end(ap);
 }

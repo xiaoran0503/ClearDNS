@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include "logger.h"
 #include "sundry.h"
 #include "system.h"
@@ -33,11 +34,18 @@ process* crontab_load(crontab *info) { // load crontab options
     create_folder("/var/spool/cron/crontabs/");
     char *my_pid = uint32_to_string(getpid());
     char *cron_cmd = string_join("\tkill -14 ", my_pid); // SIGALRM -> 14
-    char *cron_exp = string_join(info->cron, cron_cmd);
+    free(my_pid);
+    char *cron_exp = string_load("%s%s\n", info->cron, cron_cmd); // vixie-cron requires trailing '\n'
+    free(cron_cmd);
     save_file("/var/spool/cron/crontabs/root", cron_exp);
     free(cron_exp);
-    free(cron_cmd);
-    free(my_pid);
+    // vixie-cron requires spool crontab mode 0600 root:root (save_file uses fopen "w" -> 0644 under umask 022, cron ignores it)
+    if (chmod("/var/spool/cron/crontabs/root", S_IRUSR | S_IWUSR)) {
+        log_perror("Chmod `%s` failed -> ", "/var/spool/cron/crontabs/root");
+    }
+    if (chown("/var/spool/cron/crontabs/root", 0, 0)) {
+        log_perror("Chown `%s` failed -> ", "/var/spool/cron/crontabs/root");
+    }
 
     process *proc = process_init("Crontab", "crond");
     process_add_arg(proc, "-f"); // foreground

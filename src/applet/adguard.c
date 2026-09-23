@@ -60,7 +60,9 @@ char *adguard_config(adguard *info, const char *raw_config, int is_new) { // mod
         free(password);
 
         json_field_replace(dns, "port", cJSON_CreateNumber(info->dns_port));
-        json_field_replace(dns, "bind_host", cJSON_CreateString("0.0.0.0"));
+        cJSON *bind_hosts = cJSON_CreateArray();
+        cJSON_AddItemToArray(bind_hosts, cJSON_CreateString("0.0.0.0"));
+        json_field_replace(dns, "bind_hosts", bind_hosts); // v0.106+ array field; singular `bind_host` is ignored by AdGuardHome
         json_field_replace(dns, "upstream_dns_file", cJSON_CreateString(""));
         cJSON *bootstrap = cJSON_CreateArray();
         cJSON_AddItemToArray(bootstrap, cJSON_CreateString("223.5.5.5"));
@@ -84,8 +86,24 @@ char *adguard_config(adguard *info, const char *raw_config, int is_new) { // mod
     cJSON_AddItemToArray(upstream, cJSON_CreateString(info->upstream));
     json_field_replace(dns, "upstream_dns", upstream);
 
+    if (!is_new) { // configure exist -> web UI wins; only warn when cleardns.yml credentials mismatch
+        cJSON *users = cJSON_GetObjectItemCaseSensitive(json, "users");
+        cJSON *user = (users != NULL) ? users->child : NULL; // first user
+        if (user != NULL) {
+            cJSON *name = cJSON_GetObjectItemCaseSensitive(user, "name");
+            cJSON *hash = cJSON_GetObjectItemCaseSensitive(user, "password");
+            if (cJSON_IsString(name) && strcmp(name->valuestring, info->username)) {
+                log_warn("AdGuardHome username `%s` (web config) differs from cleardns.yml `%s` -> web config wins; delete AdGuardHome.yaml to re-apply cleardns.yml credentials",
+                         name->valuestring, info->username);
+            }
+            if (cJSON_IsString(hash) && bcrypt_verify(info->password, hash->valuestring) != TRUE) {
+                log_warn("AdGuardHome password differs from cleardns.yml -> web config wins; delete AdGuardHome.yaml to re-apply cleardns.yml credentials");
+            }
+        }
+    }
+
     char *config = cJSON_Print(json); // generate json string
-    cJSON_free(json);
+    cJSON_Delete(json); // recursive free whole tree (cJSON_free only frees the root node)
     return config;
 }
 
@@ -119,6 +137,7 @@ process* adguard_load(adguard *info, const char *dir) { // load adguard options
         free(adguard_config_json);
     }
     save_file(adguard_config_file, adguard_config_ret); // save modified configure
+    free(adguard_config_ret); // cJSON_Print heap string
     free(adguard_config_file);
 
     process *proc = process_init("AdGuardHome", ADGUARD_BIN); // generate adguard command

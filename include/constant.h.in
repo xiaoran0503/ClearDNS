@@ -28,7 +28,7 @@
 #define ADGUARD_USER   "admin"
 #define ADGUARD_PASSWD "cleardns"
 
-#define UPDATE_CRON    "0 4 * * *"
+#define UPDATE_CRON    "0 5 * * *"
 #define ASSETS_PKG     "/assets.tar.xz"
 
 #define ASSET_TTL        "ttl.txt"

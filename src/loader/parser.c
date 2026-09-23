@@ -127,6 +127,7 @@ void assets_parser(assets_config *config, cJSON *json) { // assets options parse
             config->disable = json_bool_value("assets.disable", json);
         }
         if (!strcmp(json->string, "cron")) {
+            free(config->cron); // release default from config_init() before overwrite
             config->cron = json_string_value("assets.cron", json);
         }
         if (!strcmp(json->string, "update")) {
@@ -148,14 +149,14 @@ void assets_parser(assets_config *config, cJSON *json) { // assets options parse
 }
 
 void cleardns_parser(cleardns_config *config, const char *config_content) { // JSON format configure
-    cJSON *json = cJSON_Parse(config_content);
-    if (json == NULL) {
+    cJSON *root = cJSON_Parse(config_content);
+    if (root == NULL) {
         log_fatal("ClearDNS configure format error");
     }
-    if (!cJSON_IsObject(json)) {
+    if (!cJSON_IsObject(root)) {
         log_fatal("ClearDNS configure root must be an object");
     }
-    json = json->child;
+    cJSON *json = root->child;
     while (json != NULL) {
         if (!strcmp(json->string, "port")) {
             config->port = json_int_value("port", json);
@@ -192,7 +193,7 @@ void cleardns_parser(cleardns_config *config, const char *config_content) { // J
         }
         json = json->next; // next field
     }
-    cJSON_free(json); // free JSON struct
+    cJSON_Delete(root); // recursive free whole tree (cJSON_free only frees the root node)
 }
 
 void config_parser(cleardns_config *config, const char *config_file) {
