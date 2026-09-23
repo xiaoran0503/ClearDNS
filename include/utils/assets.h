@@ -14,6 +14,8 @@ typedef struct {
 
 void assets_extract();
 void assets_load(asset **info);
+uint8_t assets_pending(void);
+void assets_update_run(void);
 
 asset** assets_init();
 asset* asset_init(const char *name);

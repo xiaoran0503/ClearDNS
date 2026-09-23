@@ -13,7 +13,11 @@ void cache_parser(cache_config *config, cJSON *json) { // cache options parser
     json = json->child;
     while (json != NULL) {
         if (!strcmp(json->string, "size")) {
-            config->size = json_int_value("cache.size", json);
+            int size = json_int_value("cache.size", json);
+            if (size <= 0 || size > (1 << 30)) { // reject zero/negative/oversized cache (OOM guard)
+                log_fatal("`cache.size` must be in (0, 1073741824]");
+            }
+            config->size = (uint32_t)size;
         }
         if (!strcmp(json->string, "enable")) {
             config->enable = json_bool_value("cache.enable", json);
@@ -34,7 +38,11 @@ void upstream_parser(char *caption, upstream_config *config, cJSON *json) { // u
     while (json != NULL) {
         if (!strcmp(json->string, "port")) {
             key_name = string_join(caption, ".port");
-            config->port = json_int_value(key_name, json);
+            int port = json_int_value(key_name, json);
+            if (port <= 0 || port > 65535) { // reject out-of-range before uint16 truncation
+                log_fatal("`%s` must be in (0, 65535]", key_name);
+            }
+            config->port = (uint16_t)port;
             free(key_name);
         }
         if (!strcmp(json->string, "ipv6")) {
@@ -78,7 +86,11 @@ void diverter_parser(diverter_config *config, cJSON *json) { // diverter options
     json = json->child;
     while (json != NULL) {
         if (!strcmp(json->string, "port")) {
-            config->port = json_int_value("diverter.port", json);
+            int diverter_port = json_int_value("diverter.port", json);
+            if (diverter_port <= 0 || diverter_port > 65535) {
+                log_fatal("`diverter.port` must be in (0, 65535]");
+            }
+            config->port = (uint16_t)diverter_port;
         }
         if (!strcmp(json->string, "gfwlist")) {
             config->gfwlist = json_string_list_value("diverter.gfwlist", json, config->gfwlist);
@@ -100,7 +112,11 @@ void adguard_parser(adguard_config *config, cJSON *json) { // adguard options pa
     json = json->child;
     while (json != NULL) {
         if (!strcmp(json->string, "port")) {
-            config->port = json_int_value("adguard.port", json);
+            int adguard_port = json_int_value("adguard.port", json);
+            if (adguard_port <= 0 || adguard_port > 65535) {
+                log_fatal("`adguard.port` must be in (0, 65535]");
+            }
+            config->port = (uint16_t)adguard_port;
         }
         if (!strcmp(json->string, "enable")) {
             config->enable = json_bool_value("adguard.enable", json);
@@ -159,7 +175,11 @@ void cleardns_parser(cleardns_config *config, const char *config_content) { // J
     cJSON *json = root->child;
     while (json != NULL) {
         if (!strcmp(json->string, "port")) {
-            config->port = json_int_value("port", json);
+            int main_port = json_int_value("port", json);
+            if (main_port <= 0 || main_port > 65535) {
+                log_fatal("`port` must be in (0, 65535]");
+            }
+            config->port = (uint16_t)main_port;
         }
         if (!strcmp(json->string, "cache")) {
             cache_parser(&config->cache, json);

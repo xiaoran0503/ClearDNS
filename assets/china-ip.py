@@ -6,6 +6,7 @@ import sys
 from netaddr import IPSet
 from netaddr import IPAddress
 from netaddr import IPNetwork
+from netaddr.core import AddrFormatError
 
 operators = ['china', 'cmcc', 'chinanet', 'unicom', 'tietong', 'cernet', 'cstnet', 'drpeng', 'googlecn']
 operators += ['%s6' % x for x in operators]  # add `...6` suffix
@@ -36,8 +37,8 @@ for ipAddr in ipAddrs:  # load all IP data
     try:
         ip = IPNetwork(ipAddr) if '/' in ipAddr else IPAddress(ipAddr)
         ipv4.add(ip) if ip.version == 4 else ipv6.add(ip)
-    except:
-        pass
+    except AddrFormatError as e:
+        print('[warn] invalid IP entry %r: %s' % (ipAddr, e), file=sys.stderr)
 
 with open('china-ip.txt', 'w') as fileObj:  # save to file
     fileObj.write('\n'.join([str(ip) for ip in ipv4.iter_cidrs()]) + '\n')  # format into CIDR

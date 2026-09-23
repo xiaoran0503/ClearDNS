@@ -9,6 +9,36 @@
 #include "process.h"
 #include "constant.h"
 
+uint8_t check_cron_expression(const char *exp) { // 5 whitespace-separated fields, [0-9*,/-] only
+    if (exp == NULL || strlen(exp) == 0 || strlen(exp) > 256) {
+        return FALSE;
+    }
+    if (strchr(exp, '\t') != NULL) { // no embedded tabs
+        return FALSE;
+    }
+    int fields = 0;
+    for (const char *p = exp;;) {
+        while (*p == ' ') {
+            ++p;
+        }
+        if (*p == '\0') {
+            break;
+        }
+        ++fields;
+        const char *start = p;
+        while (*p != '\0' && *p != ' ') {
+            if (strchr("0123456789*,/-", *p) == NULL) {
+                return FALSE;
+            }
+            ++p;
+        }
+        if (p == start) { // consecutive spaces produce empty field
+            return FALSE;
+        }
+    }
+    return fields == 5; // minute hour day month weekday
+}
+
 void crontab_dump(crontab *info);
 
 void crontab_free(crontab *info) { // free crontab options
@@ -32,6 +62,9 @@ process* crontab_load(crontab *info) { // load crontab options
     crontab_dump(info);
     create_folder("/var/spool/cron/");
     create_folder("/var/spool/cron/crontabs/");
+    if (!check_cron_expression(info->cron)) { // reject injection before writing root crontab
+        log_fatal("Invalid crontab expression `%s` (expect 5 fields: minute hour day month weekday)", info->cron);
+    }
     char *my_pid = uint32_to_string(getpid());
     char *cron_cmd = string_join("\tkill -14 ", my_pid); // SIGALRM -> 14
     free(my_pid);

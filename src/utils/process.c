@@ -13,6 +13,7 @@
 #include "logger.h"
 #include "sundry.h"
 #include "process.h"
+#include "assets.h"
 #include "constant.h"
 #include "structure.h"
 
@@ -37,6 +38,18 @@ process* process_init(const char *caption, const char *bin) { // init process st
     proc->cmd = string_list_init();
     string_list_append(&proc->cmd, bin); // argv[0] normally be process file name
     proc->env = string_list_init(); // empty environment variable
+    // inherit minimal env (PATH/HOME/TZ/LANG) so subprocesses work outside docker defaults
+    extern char **environ;
+    static const char *inherit[] = {"PATH=", "HOME=", "TZ=", "LANG=", NULL};
+    for (char **e = environ; *e != NULL; ++e) {
+        for (int k = 0; inherit[k] != NULL; ++k) {
+            size_t elen = strlen(inherit[k]);
+            if (!strncmp(*e, inherit[k], elen)) {
+                string_list_append(&proc->env, *e);
+                break;
+            }
+        }
+    }
     proc->cwd = WORK_DIR; // current working directory
     return proc;
 }
@@ -99,10 +112,16 @@ void process_list_append(process *proc) { // add new process into process list
 }
 
 void process_list_run() { // start process list
-    signal(SIGINT, get_exit_signal); // catch Ctrl + C (2)
-    signal(SIGQUIT, get_exit_signal); // catch Ctrl + \ (3)
-    signal(SIGTERM, get_exit_signal); // catch exit signal (15)
-    signal(SIGCHLD, get_sub_exit); // callback when child process die
+    struct sigaction sa; // catch exit signals + SIGCHLD (SA_RESTART: don't EINTR slow syscalls)
+    memset(&sa, 0, sizeof(sa));
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    sa.sa_handler = get_exit_signal;
+    sigaction(SIGINT, &sa, NULL); // catch Ctrl + C (2)
+    sigaction(SIGQUIT, &sa, NULL); // catch Ctrl + \ (3)
+    sigaction(SIGTERM, &sa, NULL); // catch exit signal (15)
+    sa.sa_handler = get_sub_exit;
+    sigaction(SIGCHLD, &sa, NULL); // callback when child process die
     for (process **proc = process_list; *proc != NULL; ++proc) {
         process_exec(*proc);
     }
@@ -121,6 +140,10 @@ void process_list_daemon() { // daemon all process in main loop
             sigprocmask(SIG_UNBLOCK, &block_mask, NULL); // keep child signal mask clean
             reap_sub_exit();
             sigprocmask(SIG_BLOCK, &block_mask, NULL);
+            continue;
+        }
+        if (assets_pending()) { // handle assets update out of signal context
+            assets_update_run();
             continue;
         }
         sigsuspend(&empty_mask); // atomically unblock and wait for signal

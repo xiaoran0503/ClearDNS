@@ -1,21 +1,20 @@
 #include <stdlib.h>
+#include <string.h>
 #include "bcrypt.h"
 #include "logger.h"
 #include "constant.h"
 
 char* bcrypt_hash(const char *data) {
     char salt[BCRYPT_HASHSIZE];
-    log_debug("BCrypt data -> `%s`", data);
+    log_debug("BCrypt data -> *** (len=%zu)", strlen(data));
     if (bcrypt_gensalt(10, salt)) {
         log_fatal("BCrypt generate salt error");
     }
-    log_debug("BCrypt salt -> `%s`", salt);
-
     char *hash = (char *)malloc(BCRYPT_HASHSIZE);
     if (bcrypt_hashpw(data, salt, hash)) {
         log_fatal("BCrypt generate hash error");
     }
-    log_debug("BCrypt hash -> `%s`", hash);
+    log_debug("BCrypt hash generated");
     return hash;
 }
 

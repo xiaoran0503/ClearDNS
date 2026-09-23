@@ -28,7 +28,7 @@ if not domains:  # all sources failed -> refuse to write empty asset
     sys.exit('ERROR: all %d sources failed, refuse to write empty chinalist.txt' % len(source))
 if failed:
     print('[warn] %d/%d sources failed' % (failed, len(source)), file=sys.stderr)
-regex = r'^(?=^.{3,255}$)[a-zA-Z0-9][a-zA-Z0-9\-]{0,62}(.[a-zA-Z0-9][a-zA-Z0-9\-]{0,62})+$'
+regex = r'^(?=^.{3,255}$)[a-zA-Z0-9][a-zA-Z0-9\-]{0,62}(\\.[a-zA-Z0-9][a-zA-Z0-9\-]{0,62})+$'
 domains = {x for x in domains if re.search(regex, str(x)) is not None}  # filter invalid domains
 with open('chinalist.txt', 'w') as fileObj:
     fileObj.write('\n'.join(sorted(domains)) + '\n')

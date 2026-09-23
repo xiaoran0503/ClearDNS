@@ -9,6 +9,8 @@
 #include "constant.h"
 #include "structure.h"
 
+static volatile sig_atomic_t ASSETS_PENDING = FALSE; // set by SIGALRM handler, handled in main loop
+
 asset **update_info;
 
 char **custom_gfwlist;
@@ -69,10 +71,25 @@ void assets_load(asset **info) { // load assets list
     *info = NULL; // disable old assets list
     assets_dump(update_info);
     log_info("Remote assets load success");
-    signal(SIGALRM, assets_update_entry); // receive SIGALRM signal
+    struct sigaction sa; // receive SIGALRM signal (SA_RESTART: don't EINTR slow syscalls)
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = assets_update_entry;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGALRM, &sa, NULL);
 }
 
-void assets_update_entry() { // receive SIGALRM for update all assets
+void assets_update_entry(int sig) { // receive SIGALRM -> async-signal-safe: only set flag
+    (void)sig;
+    ASSETS_PENDING = TRUE;
+}
+
+uint8_t assets_pending(void) { // whether assets update pending (checked in main loop)
+    return ASSETS_PENDING;
+}
+
+void assets_update_run(void) { // run assets update in main flow (not in signal context)
+    ASSETS_PENDING = FALSE;
     if (assets_size(update_info) == 0) { // empty assets list
         log_info("Skip update assets");
         return;

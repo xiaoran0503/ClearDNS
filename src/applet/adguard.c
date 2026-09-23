@@ -37,7 +37,7 @@ void adguard_dump(adguard *info) { // show adguard options in debug log
     log_debug("AdGuardHome web port -> %u", info->web_port);
     log_debug("AdGuardHome upstream -> %s", info->upstream);
     log_debug("AdGuardHome username -> %s", info->username);
-    log_debug("AdGuardHome password -> %s", info->password);
+    log_debug("AdGuardHome password -> *** (len=%zu)", strlen(info->password));
 }
 
 char *adguard_config(adguard *info, const char *raw_config, int is_new) { // modify adguard configure
@@ -120,6 +120,9 @@ process* adguard_load(adguard *info, const char *dir) { // load adguard options
     }
     if (!strcmp(info->password, "")) { // invalid password
         log_fatal("Invalid AdGuardHome password");
+    }
+    if (!strcmp(info->password, ADGUARD_PASSWD)) { // default weak credential
+        log_warn("AdGuardHome using default password `%s` -> change `password` in cleardns.yml for production", ADGUARD_PASSWD);
     }
 
     char *adguard_config_ret;

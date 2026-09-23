@@ -307,3 +307,38 @@ tar xf /assets.tar.xz <file> -C /cleardns/assets/
 
 **已知限制（记录不修）**：用户手动改坏 `AdGuardHome.yaml`（YAML 语法错误）时，cleardns 对已有配置的解析（v2.0.8+ 新增路径）会持续告警重试并可能触发容器重启循环——属用户侧破坏配置的边缘场景，维持保守处理（A10 同类风格），不做鲁棒性重构。
 
+## v2.0.11 (2026-09-23) — 第六轮审阅报告修复（P1×1 / P2×5 / P3×2）
+
+### 背景
+
+第六轮审查报告（基于最新 master）列出 14 项未修复问题（2×P1 / 6×P2 / 6×P3）。**逐项对照源码核实后**修复 8 项，6 项核实后判定不修/暂缓（见下）。
+
+### 修复
+
+| 编号 | 问题（核实结论） | 修复 |
+| --- | --- | --- |
+| P1-1 | SIGALRM 处理器内执行 `fprintf/malloc/system`/Rust FFI 等非 async-signal-safe 操作，堆破坏/死锁风险；crontab 修复后暴露频率由启动期一次性升为每日 05:00 | handler 改为仅置 `volatile sig_atomic_t` 标志（`assets_update_entry`），更新逻辑整体移入主循环 `assets_update_run()`（`process_list_daemon` 检查 `assets_pending()`）；注册改 `sigaction` + `SA_RESTART` |
+| P2-1 | 凭据明文写入 debug 日志（`adguard.c:40` / `config.c:83` / `hash.c` 三处 data/salt/hash） | 全部改为 `*** (len=N)` 摘要或删除 |
+| P2-3 | `json_int_value` 用 `strtol` 无 ERANGE/终止符检查，`port: 70000`→4464、`-1`→65535、`cache.size: -1`→4GB OOM | 改 `strtoll` + `errno==ERANGE` + 终止符 + int32 范围检查；`parser.c` 各赋值点补 `port∈(0,65535]`、`cache.size∈(0,1GiB]` 校验后转型 |
+| P2-4 | cron 表达式未校验直接写 root crontab，配置含注入即每日 root RCE（`assets.cron: "* * * * * /bin/sh -c 'id>/tmp/pwn'"` 实测可执行） | `crontab_load` 前白名单校验：5 字段、每字段仅 `[0-9*,/-]`、拒绝 `\t`、长度 ≤256；非法 `log_fatal` 拒绝启动 |
+| P2-5 | 子进程 env 全空（`process_init` 空 env），HOME/LANG/TZ 缺失、裁剪 PATH 镜像全挂 | `process_init` 从调用进程透传 `PATH/HOME/TZ/LANG`（存在才复制） |
+| P2-6 | 默认弱口令 `admin/cleardns` 硬编码 | 启动时若口令为默认值 `log_warn` 提示改密（不强制，保持部署便利） |
+| P3-2 | `gfwlist.py`/`chinalist.py` 域名正则 `.` 未转义（任意单字节可混入标签分隔）；`china-ip.py` `except: pass` 吞 `AddrFormatError` 上游变更静默失效 | `.` → `\.`；精确捕获 `AddrFormatError` 并打印 `[warn]` |
+| P3-5 | `signal()` 缺 `SA_RESTART`（process.c 4 信号 + assets.c SIGALRM） | 全部改 `sigaction` + `SA_RESTART` |
+
+### 核实后判定不修（记录理由）
+
+- **P1-2**（ECHILD 误判 fork 风暴）：逐行分析未复现"多 fork"机制——ECHILD 分支（`waitpid` 返回 ECHILD 即该 pid 已死）重启语义正确，与成功分支等价且不重复；尾部 `waitpid(-1)` 消费与循环 waitpid 的竞态净效果仍是重启一次。**维持现状，建议后续 strace 实测确认后再议**。
+- **P2-2**（`system()` 拼接注入）：所有 `system()` 拼接参数均来自**编译期常量**（`extract` 的 ASSET_*、`file_append` 的 loader.c 内部路径），无用户输入路径；`cleardns.c:116` 的 `run_command(*script)` 是**设计上的用户自定义脚本功能**。判定为低危/误报，不修。
+- **P3-1**（CVE 审计缺位）：`cargo audit` / `pip-audit` 列入后续待办（需 CI 安装 audit 工具链），本轮不引入。
+- **P3-3**（密码轮换需手动删 yaml）：v2.0.10 已加 `bcrypt_verify` 一致性警告缓解；`rewrite_password` 选项为功能扩展，暂缓。
+- **P3-4**（容器 root 运行）：降权为架构级改动（crond spool 0600/root:root、AdGuardHome 目录权限、dnsproxy 绑定 53/80 低端口连锁），风险/收益不划算，维持 root，记录。
+- **P3-6**（启动 `usleep(8000)`×6 串行 48ms）：低价值，不修。
+- **P3-7**（check-versions.py None 崩溃）：`major(None)` 实际不可达（解析失败分支已 `continue`、最新版字段有兜底）；`update-assets.yml` 的 `contents: write` 是自动维护回推必需权限（恶意脚本需先合入 master，有常规 review 防线），保持。
+
+### 验证
+
+- 8 个 C 文件 WSL `-std=gnu99 -Wall -Wextra -Werror` **零警告**；
+- cron 白名单独立单元测试 13 用例全 PASS（合法表达式接受：`0 5 * * *`/`*/15 * * * *`/`5,10,15 * * * *`/`*/2 */3 1-7 * *`；注入拒绝：追加命令、嵌入 `\t`、shell 元字符、4/6 字段）；
+- Python 正则修正后 `a:b.com` / `bad,domain.com` / `has space.com` 均被过滤（修复前通过）；
+- 完整镜像构建 + 冒烟见 CI 验证记录。

@@ -80,7 +80,7 @@ void config_dump(cleardns_config *config) { // dump config info of cleardns
     log_debug("AdGuardHome port -> %u", config->adguard.port);
     log_debug("AdGuardHome enable -> %s", show_bool(config->adguard.enable));
     log_debug("AdGuardHome username -> %s", config->adguard.username);
-    log_debug("AdGuardHome password -> %s", config->adguard.password);
+    log_debug("AdGuardHome password -> *** (len=%zu)", strlen(config->adguard.password));
 
     log_debug("Assets disable -> %s", show_bool(config->assets.disable));
     log_debug("Assets update cron -> `%s`", config->assets.cron);
