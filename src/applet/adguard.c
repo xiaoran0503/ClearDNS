@@ -79,10 +79,18 @@ char *adguard_config(adguard *info, const char *raw_config) { // modify adguard 
     json_field_replace(dns, "bind_host", cJSON_CreateString("0.0.0.0"));
     json_field_replace(dns, "upstream_dns", upstream);
     json_field_replace(dns, "upstream_dns_file", cJSON_CreateString(""));
-    json_field_replace(dns, "bootstrap_dns", cJSON_CreateArray());
+    cJSON *bootstrap = cJSON_CreateArray();
+    cJSON_AddItemToArray(bootstrap, cJSON_CreateString("223.5.5.5"));
+    cJSON_AddItemToArray(bootstrap, cJSON_CreateString("119.29.29.29"));
+    json_field_replace(dns, "bootstrap_dns", bootstrap);
+    cJSON *fallback = cJSON_CreateArray();
+    cJSON_AddItemToArray(fallback, cJSON_CreateString("223.5.5.5"));
+    cJSON_AddItemToArray(fallback, cJSON_CreateString("119.29.29.29"));
+    json_field_replace(dns, "fallback_dns", fallback);
+    json_field_replace(dns, "edns_enabled", cJSON_CreateTrue());
     json_field_replace(dns, "cache_size", cJSON_CreateNumber(4194304)); // 4MiB cache
-    json_field_replace(dns, "cache_ttl_min", cJSON_CreateNumber(0));
-    json_field_replace(dns, "cache_ttl_max", cJSON_CreateNumber(0));
+    json_field_replace(dns, "cache_ttl_min", cJSON_CreateNumber(30)); // override min TTL 30s
+    json_field_replace(dns, "cache_ttl_max", cJSON_CreateNumber(300)); // override max TTL 300s
     json_field_replace(dns, "cache_optimistic", cJSON_CreateTrue()); // optimistic cache
 
     char *config = cJSON_Print(json); // generate json string

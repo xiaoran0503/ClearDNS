@@ -202,3 +202,20 @@ tar xf /assets.tar.xz <file> -C /cleardns/assets/
 
 - `assets.c` 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译零警告；
 - 推送后 CI 构建，1ms 拉取部署：`/cleardns/assets/` 三个文件存在且非空、`/etc/cleardns/*.txt` 与 assets 内容一致（非 0 字节）、gfwlist/chinalist 分流真实生效。
+
+
+## v2.0.7 (2026-09-23) — AdGuardHome 缓存 TTL 覆盖 / EDNS / 上游加固
+
+按用户要求调整 AdGuardHome 生成配置（`src/applet/adguard.c` 的 `adguard_config()`，每次启动覆盖）：
+
+### 变更
+
+- **缓存 TTL 覆盖**：`cache_ttl_min: 0 -> 30`（最小 TTL 30 秒）、`cache_ttl_max: 0 -> 300`（最大 TTL 300 秒）——低 TTL 记录（如故障探测域名）不低于 30s、高 TTL 不超 300s，减少对上游的重复查询；
+- **EDNS 开启**：`edns_enabled: true`（EDNS Client Subnet）；
+- **Bootstrap DNS**：`223.5.5.5` + `119.29.29.29`（此前为空数组，无法解析 DoH 主机名时兜底）；
+- **后备 DNS（fallback_dns）**：`223.5.5.5` + `119.29.29.29`（主上游不可用时直接走国内明文 DNS）。
+
+### 验证
+
+- `adguard.c` 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译零警告；
+- 推送后 CI 构建，1ms 拉取部署：确认 AdGuardHome.yaml 生成 `cache_ttl_min: 30` / `cache_ttl_max: 300` / `edns_enabled: true` / `bootstrap_dns` 与 `fallback_dns` 双地址，AdGuardHome 正常启动、DNS 解析正常。
