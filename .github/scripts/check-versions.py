@@ -175,6 +175,8 @@ def build_report(cur, latest):
 
 def ensure_issue(outdated):
     """有更新时创建去重 issue（仅 CI 且有 token 时）"""
+    if not outdated:
+        return
     if not (TOKEN and REPO):
         return
     title = f"[版本更新] ClearDNS 依赖有新版本 ({__import__('datetime').date.today().isoformat()})"
