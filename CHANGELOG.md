@@ -155,3 +155,19 @@
   - 首次崩溃处理延迟 45 秒系 assets 首更（SIGALRM 同步拉取）占用所致——CHILD_EXIT 标志待处理、更新结束后统一重启，无事件丢失（报告 2.5 节权衡符合预期）；
   - 容器最终仅因外部 SIGTERM 退出（`Get exit signal` 正常路径），非缺陷。
 - **干净镜像冒烟（v2.0.0-14-g1cfddc2）**：五服务 running success + `Process start complete`；国内组（阿里 DoH）、国外组（doh.ac0.top）、主入口 overture 分流解析全部正常。
+
+
+## v2.0.5 (2026-09-23) — 默认缓存方案落地 + 国外组上游调整
+
+按运行日志分析结论（doh.ac0.top 故障导致国外组查询超时）与缓存收益评估，调整默认配置：
+
+### 变更
+
+- **ClearDNS 组缓存默认关闭**（`src/loader/default.c`）：`cache.enable: true -> false`——与 AdGuardHome 缓存二选一，避免分流器上重复缓存开销；
+- **AdGuardHome 默认开启缓存 4MiB + 乐观缓存**（`src/applet/adguard.c`）：生成 AdGuardHome.yaml 时注入 `dns.cache_size=4194304` / `cache_ttl_min=0` / `cache_ttl_max=0` / `cache_optimistic=true`——缓存位于链路最上游，上游故障期间已缓存查询完全本地返回；
+- **国外组 primary 更换**（`src/loader/default.c`）：`https://doh.ac0.top/google-query` -> `https://doh.18bit.cn/dns-query`（上游可用性调整，fallback 8.8.8.8/1.1.1.1 保留）。
+
+### 验证
+
+- `default.c` / `adguard.c` 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译零警告；
+- 推送后 GitHub Actions 直连构建，1ms 拉取部署：确认生成 cleardns.yml（cache.enable=false）与 AdGuardHome.yaml（cache_size=4194304 / cache_optimistic=true），国外组经 doh.18bit.cn 解析正常。

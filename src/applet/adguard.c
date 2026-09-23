@@ -80,6 +80,10 @@ char *adguard_config(adguard *info, const char *raw_config) { // modify adguard 
     json_field_replace(dns, "upstream_dns", upstream);
     json_field_replace(dns, "upstream_dns_file", cJSON_CreateString(""));
     json_field_replace(dns, "bootstrap_dns", cJSON_CreateArray());
+    json_field_replace(dns, "cache_size", cJSON_CreateNumber(4194304)); // 4MiB cache
+    json_field_replace(dns, "cache_ttl_min", cJSON_CreateNumber(0));
+    json_field_replace(dns, "cache_ttl_max", cJSON_CreateNumber(0));
+    json_field_replace(dns, "cache_optimistic", cJSON_CreateTrue()); // optimistic cache
 
     char *config = cJSON_Print(json); // generate json string
     cJSON_free(json);

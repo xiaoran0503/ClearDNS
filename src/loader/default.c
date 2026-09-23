@@ -8,7 +8,7 @@
 port: 53\n\
 \n\
 cache:\n\
-  enable: true\n\
+  enable: false\n\
   size: 4194304\n\
   optimistic: true\n\
 \n\
@@ -34,7 +34,7 @@ foreign:\n\
   port: 6053\n\
   bootstrap: 8.8.8.8\n\
   primary:\n\
-    - https://doh.ac0.top/google-query\n\
+    - https://doh.18bit.cn/dns-query\n\
   fallback:\n\
     - 8.8.8.8\n\
     - 1.1.1.1\n\
