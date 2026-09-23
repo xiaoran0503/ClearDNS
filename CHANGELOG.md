@@ -342,3 +342,35 @@ tar xf /assets.tar.xz <file> -C /cleardns/assets/
 - cron 白名单独立单元测试 13 用例全 PASS（合法表达式接受：`0 5 * * *`/`*/15 * * * *`/`5,10,15 * * * *`/`*/2 */3 1-7 * *`；注入拒绝：追加命令、嵌入 `\t`、shell 元字符、4/6 字段）；
 - Python 正则修正后 `a:b.com` / `bad,domain.com` / `has space.com` 均被过滤（修复前通过）；
 - 完整镜像构建 + 冒烟见 CI 验证记录。
+
+## v2.0.12 (2026-09-23) — 信号诊断 hotfix + 容器退出循环根因定位
+
+### 变更
+
+- `src/utils/process.c` `get_exit_signal` 增加信号号参数并打印 `Get exit signal -> %d`，用于精确定位 cleardns 收到的终止信号来源（诊断用途，无行为变更）。
+
+### 根因定位：容器 exit 循环 = WSL 环境故障，非软件缺陷
+
+v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执行 `pgrep overture | xargs -r kill` 后，容器日志出现 `Get exit signal` → `ClearDNS exit` → 容器被 docker 重启。经系统性排查（见下），**该关联为巧合**，真实根因如下：
+
+**触发链**：Windows 侧 WSL 服务（9P 文件系统协议 `p9io.cpp`）持续异常（4 小时内 `AcceptAsync canceled` 异常 1350 次）→ WSL 发行版周期性执行关机流程（journalctl 4 小时内 88 次 power off 事件，每 30~90 秒一次）→ systemd 停止所有服务（含 `docker.service`，日志证实 `Stopping docker.service → Processing signal 'terminated'`）→ dockerd 向全部容器 PID 1 发 SIGTERM → cleardns 收到 SIGTERM 记录 `Get exit signal` 优雅退出 → WSL 服务恢复后 systemd 自动拉起 docker（`Restart=always RestartSec=2`）→ `--restart unless-stopped` 容器自动恢复。
+
+**排除的假设**（实测证据）：
+1. 容器内子进程死亡转发 SIGTERM——`sigtest` 容器内 fork+setsid+kill 子进程，父进程仅收 SIGCHLD，无 SIGTERM，排除；
+2. 进程组广播——cleardns 各子进程独立 sid/pgid，排除；
+3. cleardns 自身信号处理错误——手动 `kill -CHLD 1` 不触发 exit、SIGINT 触发，行为正确；
+4. 高频只读 docker CLI（ps/exec/logs/inspect）——逐个测试均未触发 dockerd 重启；
+5. 代理/镜像源问题——dockerd 无 crash/panic/OOM 日志，退出均为 systemd stop 引发的优雅 shutdown。
+
+**决定性证据**：停止高频 `wsl` 命令后 dockerd 连续 120s+ 零重启；`journalctl -u docker` 显示每次容器 exit 均对应 `systemd Stopping docker.service`；三容器（v211/v212/v213）重启时间与 systemd 停止 docker 时间完全对齐。
+
+**处置**：
+- 判定为 **WSL 环境问题**（Windows 侧 wslservice 9P 异常循环），非 ClearDNS 代码缺陷，**无需修复代码**；
+- v2.0.12 保留信号号打印（低开销诊断能力，后续环境异常可快速区分信号来源）；
+- 用户侧建议：`wsl --update` 升级 WSL / 检查 Windows 侧安全软件与代理对 wslservice 的干扰；调试时避免高频访问 `/mnt/c`（9P 挂载）加剧异常；
+- GitHub Actions 编译产物与生产部署不受本环境问题影响。
+
+### 验证
+
+- v2.0.12（commit `851678c`）CI run `35816786157` success；
+- 本条目为诊断结论记录，无新增代码行为变更（信号号打印除外）。
