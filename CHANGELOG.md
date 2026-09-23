@@ -260,4 +260,4 @@ tar xf /assets.tar.xz <file> -C /cleardns/assets/
 ### 验证
 
 - 本地直连实测脚本：8 个组件全部解析成功且判定"✅ 最新"，输出 Markdown 表格正常；
-- 推送后触发 workflow_dispatch，确认 CI 全绿。
+- 推送后触发 workflow_dispatch 两轮：首轮触发暴露"全部最新时仍尝试创建空 issue（HTTP 410）"→ 修复为无更新项时直接跳过 issue 创建；第二轮（run #3，head 78fa0d8）**CI 全绿**，核查表格正常输出到 job summary，且未创建任何 issue（无更新时行为正确）。
