@@ -7,6 +7,7 @@
 typedef struct {
     uint16_t port;
     uint32_t cache;
+    uint32_t timeout; // upstream query timeout in seconds (0 = dnsproxy default)
     uint8_t ipv6; // bool value
     uint8_t debug; // bool value
     uint8_t verify; // bool value

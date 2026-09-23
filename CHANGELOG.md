@@ -374,3 +374,22 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
 
 - v2.0.12（commit `851678c`）CI run `35816786157` success；
 - 本条目为诊断结论记录，无新增代码行为变更（信号号打印除外）。
+
+## v2.0.13 (2026-09-23) — 生产日志问题处置 + assets 正则回归修复
+
+### 变更
+
+1. **dnsproxy 上游超时可配置（生产建议 2）**：`domestic` / `foreign` 段新增可选 `timeout` 字段（秒，默认 5s；0 = dnsproxy 内置默认）。
+   - 生成 `domestic.json` / `foreign.json` 时输出 `"timeout": "5s"`（dnsproxy `timeutil.Duration` 格式），上游不可用时失败从 30s 缩短到 5s；
+   - 涉及 `include/loader/config.h`、`include/applet/dnsproxy.h`、`src/loader/config.c`（init/dump）、`src/loader/parser.c`（校验 `[0,60]`）、`src/loader/loader.c`、`src/applet/dnsproxy.c`、`src/loader/default.c`。
+2. **Update Assets workflow 失败修复（截图 #3，定时 09-23 触发）**：v2.0.11 的 P3-2 正则修复将 `(.[a-z...])` 误改为 `(\\.[a-z...])`——Python 原始字符串中 `\\` 匹配字面反斜杠，正常域名全部被过滤，`gfwlist.txt` / `chinalist.txt` 被写成 1 行，validate 拦截退出码 1。
+   - 修正为单反斜杠 `\.`（匹配字面点），并补充纯 IPv4 排除（`^\d{1,3}(\.\d{1,3}){3}$`）；
+   - 单测验证：修复前 `google.com` 等全部 False → 修复后 True；`bad,domain.com` / 单标签 / 超长 / 纯 IP 仍正确过滤。
+3. **workflow 运行时升级**：三个 workflow 全部 `runs-on: ubuntu-26.04`（锁定，避开 2026-10-19 `ubuntu-latest` 迁移 Ubuntu 26 的不确定性）、`actions/checkout@v5`、`actions/setup-python@v6`（消除 Node.js 20 弃用告警）。
+4. **docker-compose 日志轮转（生产建议 4）**：`E:\缓存\ClearDNS\docker-compose.yml` 增加 `logging`（json-file，max-size 10m × max-file 3），上游不可用时 ERROR 刷屏不再撑爆磁盘。
+
+### 验证
+
+- WSL 本地编译通过（`make` 100%，无新告警）；
+- 本地运行确认：默认配置含 `timeout: 5`，解析 `Domestic/Foreign timeout -> 5`，生成的 `domestic.json` / `foreign.json` 均含 `"timeout":"5s"`；
+- Update Assets 修复由 GitHub Actions workflow_dispatch 实测验证（见 CI 记录）；镜像构建与冒烟见 Docker Build 记录。

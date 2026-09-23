@@ -28,13 +28,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     permissions:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # 需要完整历史与 tags（Dockerfile cleardns 阶段 git describe --tags 取版本号）
           fetch-depth: 0

@@ -45,6 +45,15 @@ void upstream_parser(char *caption, upstream_config *config, cJSON *json) { // u
             config->port = (uint16_t)port;
             free(key_name);
         }
+        if (!strcmp(json->string, "timeout")) {
+            key_name = string_join(caption, ".timeout");
+            int timeout = json_int_value(key_name, json);
+            if (timeout < 0 || timeout > 60) { // reject out-of-range (0 = dnsproxy default)
+                log_fatal("`%s` must be in [0, 60]", key_name);
+            }
+            config->timeout = (uint32_t)timeout;
+            free(key_name);
+        }
         if (!strcmp(json->string, "ipv6")) {
             key_name = string_join(caption, ".ipv6");
             config->ipv6 = json_bool_value(key_name, json);

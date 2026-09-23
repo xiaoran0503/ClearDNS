@@ -23,6 +23,7 @@ adguard:\n\
 \n\
 domestic:\n\
   port: 4053\n\
+  timeout: 5\n\
   bootstrap: 223.5.5.5\n\
   primary:\n\
     - https://dns.alidns.com/dns-query\n\
@@ -32,6 +33,7 @@ domestic:\n\
 \n\
 foreign:\n\
   port: 6053\n\
+  timeout: 5\n\
   bootstrap: 8.8.8.8\n\
   primary:\n\
     - https://doh.18bit.cn/dns-query\n\
