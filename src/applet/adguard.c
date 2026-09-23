@@ -87,7 +87,9 @@ char *adguard_config(adguard *info, const char *raw_config) { // modify adguard 
     cJSON_AddItemToArray(fallback, cJSON_CreateString("223.5.5.5"));
     cJSON_AddItemToArray(fallback, cJSON_CreateString("119.29.29.29"));
     json_field_replace(dns, "fallback_dns", fallback);
-    json_field_replace(dns, "edns_enabled", cJSON_CreateTrue());
+    cJSON *edns = cJSON_CreateObject();
+    cJSON_AddItemToObject(edns, "enabled", cJSON_CreateTrue());
+    json_field_replace(dns, "edns_client_subnet", edns);
     json_field_replace(dns, "cache_size", cJSON_CreateNumber(4194304)); // 4MiB cache
     json_field_replace(dns, "cache_ttl_min", cJSON_CreateNumber(30)); // override min TTL 30s
     json_field_replace(dns, "cache_ttl_max", cJSON_CreateNumber(300)); // override max TTL 300s
