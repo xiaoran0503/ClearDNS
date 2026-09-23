@@ -40,7 +40,7 @@ foreign:\n\
     - 1.1.1.1\n\
 \n\
 assets:\n\
-  cron: \"0 4 * * *\"\n\
+  cron: \"0 5 * * *\"\n\
   update:\n\
     gfwlist.txt: https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt\n\
     china-ip.txt: https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt\n\

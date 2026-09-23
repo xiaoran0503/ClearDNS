@@ -276,7 +276,7 @@ tar xf /assets.tar.xz <file> -C /cleardns/assets/
 | 编号 | 问题（核实结论） | 修复 |
 | --- | --- | --- |
 | A1 · P0 | crontab 无尾随换行 + 0644 → vixie-cron 判损坏整份忽略，**每日资源更新从未执行**（启动时 `kill(SIGALRM)` 掩盖；`update-assets.yml` 生成的新分流表永不落地） | `crontab_load()`：cron 表达式补 `\n`，写盘后 `chmod 0600` + `chown root:root` |
-| A1.7 | 容器 cron 与 GHA `update-assets` 同为 04:00 UTC，可能撞生成窗口 | `UPDATE_CRON` 改 `"0 5 * * *"` |
+| A1.7 | 容器 cron 与 GHA `update-assets` 同为 04:00 UTC，可能撞生成窗口 | 真正生效点为 `src/loader/default.c` 的 `DEFAULT_CONFIG`（`assets.cron: "0 4 * * *"` 写死，覆盖常量），改为 `"0 5 * * *"`；`UPDATE_CRON` 常量（`constant.h.in`）同步改为 `"0 5 * * *"`（未配置时的 init 兜底值），两处一致 |
 | A2 · P2 | `dns.bind_host`（单数）为 v0.106 前字段，v0.107.79 只认 `bind_hosts` 数组（镜像内实测键被丢弃，无功能影响但将来绑定失效） | 首启注入改为 `bind_hosts: ["0.0.0.0"]` |
 | A3 · P1 | `fetch.rs` 不校验 HTTP 状态码，4xx/5xx 错误页正文会经 `asset_tidy` 覆盖写盘（与构建期 `curl -sfL` 闸门不对称） | `http_fetch()` 显式 `response.status().is_success()` 校验，非 2xx 返回 Err |
 | A3b · P2 | `ffi.rs` 直接 `truncate` 写目标文件，SIGTERM 打断留半截分流表，且 `extract()` "存在即跳过" 导致坏数据长期留存 | 改为写 `*.tmp` 后 `rename` 原子替换 |
