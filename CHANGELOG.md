@@ -240,3 +240,24 @@ tar xf /assets.tar.xz <file> -C /cleardns/assets/
 
 - `adguard.c` 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译零警告；
 - 推送后 CI 构建，1ms 拉取部署：首启生成完整默认 AdGuardHome.yaml；修改 yaml 中缓存值后重启容器，缓存值保留、`upstream_dns` 仍指向 127.0.0.1:5353、解析正常。
+
+
+## v2.0.9 (2026-09-23) — 依赖版本自动核查（CI 定时巡检）
+
+### 背景
+
+用户要求列出"未拉到最新的依赖/组件/编译工具/运行时"清单。核查结论（2026-09-23）：**当前版本矩阵全部为最新稳定版，无任何升级动作**——Debian 13.7 / Go 1.27.1 / Node 24.21.0 LTS / Rust 1.98.1 / dnsproxy 0.84.2 / AdGuardHome 0.107.79 / overture fork 2.0.9 / cmake 4.4.3（pip 约束 `>=4.2,<5` 内）。
+
+为免人工逐次核查，新增自动巡检：
+
+### 变更
+
+- **新增 `.github/scripts/check-versions.py`**：从 `Dockerfile` 解析当前版本矩阵（ARG/ENV 镜像 tag 与版本变量），对比官方最新稳定版——GitHub Releases API（dnsproxy / AdGuardHome / cmake / overture fork tags）、go.dev（Go）、nodejs.org（Node 最新 LTS）、rust-lang 官方 channel manifest（Rust stable）、debian.org（trixie 最新 point release）；
+- **新增 `.github/workflows/check-versions.yml`**：每周一 00:00 UTC + 手动触发，输出核查表格到 job summary；发现新版本时自动创建**去重 issue**（标题含日期，已存在同标题 open issue 则跳过），大版本升级（major 变化）标注"需用户决策"，overture 为 fork 特判"需先同步 fork"；
+- cmake 为 pip 范围约束（非固定版本），脚本校验最新 4.x 是否落在 `>=4.2,<5` 区间内，越界才告警；
+- 本版本不修改任何构建/运行配置（核查结论：全部已最新）。
+
+### 验证
+
+- 本地直连实测脚本：8 个组件全部解析成功且判定"✅ 最新"，输出 Markdown 表格正常；
+- 推送后触发 workflow_dispatch，确认 CI 全绿。
