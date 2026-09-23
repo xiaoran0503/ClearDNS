@@ -296,3 +296,14 @@ tar xf /assets.tar.xz <file> -C /cleardns/assets/
 - 改动 5 个 C 文件（`crontab.c`/`adguard.c`/`parser.c`/`logger.c`/`assets.c`）在 WSL 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译**零警告**；
 - Rust 侧（`fetch.rs`/`ffi.rs`）改动交由 CI 全量编译验证；
 - 推送后 CI 构建 + 1ms 拉取部署冒烟：cron 文件 0600 带尾换行、每日 05:00 触发、AdGuardHome.yaml 生成 `bind_hosts`、功能解析正常（见验证记录）。
+
+**v2.0.10 终版镜像（e07901e，CI run #16）完整冒烟验证记录：**
+
+- **crontab**：`/var/spool/cron/crontabs/root` 权限 0600，内容 `0 5 * * *	kill -14 1`（含尾换行）——默认配置 `DEFAULT_CONFIG` 04→05 修复确认生效（此前 v2.0.10 首版镜像仍为 04，因真正生效源是 `default.c` 而非常量，已补修并重推）；
+- **AdGuardHome.yaml**：首启生成 `bind_hosts: [0.0.0.0]`（A2 确认）；
+- **assets**：`china-ip.txt` 10,263 行 / `chinalist.txt` 135,243 行 / `gfwlist.txt` 7,778 行，均非空；
+- **DNS 全链路**（WSL 宿主 UDP 直查容器 bridge IP）：`:53`（AdGuardHome 主入口）baidu 4 条 / google 6 条 A 记录；`:5353`（overture 分流）国内外域名均正常；`:4053`（国内 dnsproxy·阿里 DoH）/ `:6053`（国外 dnsproxy·18bit DoH）直连解析正常——4053/6053 为 UDP 服务，冒烟初版脚本误用 TCP 端口映射导致"超时"，属脚本问题，非软件缺陷；
+- **A5 凭据一致性**：修改 AdGuardHome.yaml 的 `users[0].password` 后重启，正确输出 `AdGuardHome password differs from cleardns.yml -> web config wins; delete AdGuardHome.yaml to re-apply cleardns.yml credentials` 警告。
+
+**已知限制（记录不修）**：用户手动改坏 `AdGuardHome.yaml`（YAML 语法错误）时，cleardns 对已有配置的解析（v2.0.8+ 新增路径）会持续告警重试并可能触发容器重启循环——属用户侧破坏配置的边缘场景，维持保守处理（A10 同类风格），不做鲁棒性重构。
+
