@@ -170,4 +170,8 @@
 ### 验证
 
 - `default.c` / `adguard.c` 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译零警告；
-- 推送后 GitHub Actions 直连构建，1ms 拉取部署：确认生成 cleardns.yml（cache.enable=false）与 AdGuardHome.yaml（cache_size=4194304 / cache_optimistic=true），国外组经 doh.18bit.cn 解析正常。
+- 推送后 GitHub Actions 直连构建（run 35805563825 全绿），1ms 拉取部署实测（v2.0.0-16-gf081791）：
+  - `cleardns.yml` 生成 `cache.enable: false`（ClearDNS 组缓存关闭）；
+  - `AdGuardHome.yaml` 生成 `cache_size: 4194304` / `cache_optimistic: true`（4MiB + 乐观缓存注入成功，含 AdGuardHome 默认 `cache_optimistic_answer_ttl: 30s` 等优化字段）；
+  - `foreign.json` upstream 确认 `doh.18bit.cn/dns-query`（国外组 google 返回 216.239.38.120，新上游生效）；
+  - 国内组（阿里 DoH）、国外组（doh.18bit.cn）、主入口分流解析全部正常。
