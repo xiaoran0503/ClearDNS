@@ -188,8 +188,8 @@ void server_exit(int exit_code) { // kill sub process and exit
     exit(exit_code);
 }
 
-void get_exit_signal() { // get SIGINT or SIGTERM signal
-    log_info("Get exit signal");
+void get_exit_signal(int sig) { // get SIGINT/SIGQUIT/SIGTERM signal
+    log_info("Get exit signal -> %d", sig);
     server_exit(EXIT_NORMAL); // normally exit
 }
 
