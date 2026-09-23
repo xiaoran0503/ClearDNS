@@ -219,3 +219,24 @@ tar xf /assets.tar.xz <file> -C /cleardns/assets/
 
 - `adguard.c` 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译零警告；
 - 推送后 CI 构建，1ms 拉取部署：确认 AdGuardHome.yaml 生成 `cache_ttl_min: 30` / `cache_ttl_max: 300` / `edns_enabled: true` / `bootstrap_dns` 与 `fallback_dns` 双地址，AdGuardHome 正常启动、DNS 解析正常。
+
+
+## v2.0.8 (2026-09-23) — AdGuardHome 配置尊重网页端（仅强制上游指向 overture）
+
+### 背景
+
+用户反馈：AdGuardHome 网页端修改的设置（缓存、TTL、EDNS、引导/后备 DNS 等）在重启容器后被还原。
+
+根因：`adguard_config()` 每次启动（含容器重启）都用 `json_field_replace` 强制覆盖写回 `dns` 段全部核心字段与 `users`。
+
+### 变更
+
+`src/applet/adguard.c` 重构，`adguard_config()` 增加 `is_new` 参数：
+
+- **首次创建**（AdGuardHome.yaml 不存在）：注入完整默认值——账号密码、`dns.port/bind_host`、`upstream_dns`、`bootstrap_dns`(223.5.5.5/119.29.29.29)、`fallback_dns`(223.5.5.5/119.29.29.29)、`edns_client_subnet.enabled=true`、缓存 4MiB + TTL 30–300s + 乐观缓存；
+- **已存在配置**：**仅强制 `upstream_dns = 127.0.0.1:5353`**（主链路命脉，防止网页配置导致分流链路断裂），其余字段（缓存、TTL、EDNS、引导/后备 DNS、账号、端口等）完全尊重网页端设置，重启不再还原。
+
+### 验证
+
+- `adguard.c` 以 `-std=gnu99 -Wall -Wextra -Werror` 语法级编译零警告；
+- 推送后 CI 构建，1ms 拉取部署：首启生成完整默认 AdGuardHome.yaml；修改 yaml 中缓存值后重启容器，缓存值保留、`upstream_dns` 仍指向 127.0.0.1:5353、解析正常。

@@ -9,7 +9,7 @@
 #include "constant.h"
 
 void adguard_dump(adguard *info);
-char *adguard_config(adguard *info, const char *raw_config);
+char *adguard_config(adguard *info, const char *raw_config, int is_new);
 
 void adguard_free(adguard *info) { // free adguard options
     free(info->upstream);
@@ -40,60 +40,49 @@ void adguard_dump(adguard *info) { // show adguard options in debug log
     log_debug("AdGuardHome password -> %s", info->password);
 }
 
-char *adguard_config(adguard *info, const char *raw_config) { // modify adguard configure
+char *adguard_config(adguard *info, const char *raw_config, int is_new) { // modify adguard configure
     cJSON *json = cJSON_Parse(raw_config);
     if (json == NULL) {
         log_fatal("AdGuardHome configure error");
     }
 
-    char *password = NULL;
-    cJSON *user_passwd = cJSON_GetObjectItem(cJSON_GetArrayItem(
-            cJSON_GetObjectItem(json, "users"), 0), "password");
-    if (cJSON_IsString(user_passwd)) {
-        char *hash_val = user_passwd->valuestring;
-        log_debug("Legacy hash value -> `%s`", hash_val);
-        if (bcrypt_verify(info->password, hash_val)) {
-            log_debug("Legacy hash value verify success");
-            password = strdup(hash_val);
-        } else {
-            log_debug("Legacy hash value verify failed");
-        }
-    }
-    if (password == NULL) { // password hash not ready
-        password = bcrypt_hash(info->password);
-    }
-    log_debug("AdGuardHome password -> `%s`", password);
-
-    cJSON *user_config = cJSON_CreateObject(); // setting up username and password
-    cJSON *users_config = cJSON_CreateArray();
-    cJSON_AddItemToObject(user_config, "name", cJSON_CreateString(info->username));
-    cJSON_AddItemToObject(user_config, "password", cJSON_CreateString(password));
-    cJSON_AddItemToArray(users_config, user_config);
-    json_field_replace(json, "users", users_config);
-    free(password);
-
     cJSON *dns = json_field_get(json, "dns"); // setting up dns options
+    if (is_new) { // first create -> inject full defaults
+        char *password = bcrypt_hash(info->password); // password hash
+        log_debug("AdGuardHome password -> `%s`", password);
+
+        cJSON *user_config = cJSON_CreateObject(); // setting up username and password
+        cJSON *users_config = cJSON_CreateArray();
+        cJSON_AddItemToObject(user_config, "name", cJSON_CreateString(info->username));
+        cJSON_AddItemToObject(user_config, "password", cJSON_CreateString(password));
+        cJSON_AddItemToArray(users_config, user_config);
+        json_field_replace(json, "users", users_config);
+        free(password);
+
+        json_field_replace(dns, "port", cJSON_CreateNumber(info->dns_port));
+        json_field_replace(dns, "bind_host", cJSON_CreateString("0.0.0.0"));
+        json_field_replace(dns, "upstream_dns_file", cJSON_CreateString(""));
+        cJSON *bootstrap = cJSON_CreateArray();
+        cJSON_AddItemToArray(bootstrap, cJSON_CreateString("223.5.5.5"));
+        cJSON_AddItemToArray(bootstrap, cJSON_CreateString("119.29.29.29"));
+        json_field_replace(dns, "bootstrap_dns", bootstrap);
+        cJSON *fallback = cJSON_CreateArray();
+        cJSON_AddItemToArray(fallback, cJSON_CreateString("223.5.5.5"));
+        cJSON_AddItemToArray(fallback, cJSON_CreateString("119.29.29.29"));
+        json_field_replace(dns, "fallback_dns", fallback);
+        cJSON *edns = cJSON_CreateObject();
+        cJSON_AddItemToObject(edns, "enabled", cJSON_CreateTrue());
+        json_field_replace(dns, "edns_client_subnet", edns);
+        json_field_replace(dns, "cache_size", cJSON_CreateNumber(4194304)); // 4MiB cache
+        json_field_replace(dns, "cache_ttl_min", cJSON_CreateNumber(30)); // override min TTL 30s
+        json_field_replace(dns, "cache_ttl_max", cJSON_CreateNumber(300)); // override max TTL 300s
+        json_field_replace(dns, "cache_optimistic", cJSON_CreateTrue()); // optimistic cache
+    }
+
+    // always enforce upstream to overture (main link lifeline), respect web UI for the rest
     cJSON *upstream = cJSON_CreateArray();
     cJSON_AddItemToArray(upstream, cJSON_CreateString(info->upstream));
-    json_field_replace(dns, "port", cJSON_CreateNumber(info->dns_port));
-    json_field_replace(dns, "bind_host", cJSON_CreateString("0.0.0.0"));
     json_field_replace(dns, "upstream_dns", upstream);
-    json_field_replace(dns, "upstream_dns_file", cJSON_CreateString(""));
-    cJSON *bootstrap = cJSON_CreateArray();
-    cJSON_AddItemToArray(bootstrap, cJSON_CreateString("223.5.5.5"));
-    cJSON_AddItemToArray(bootstrap, cJSON_CreateString("119.29.29.29"));
-    json_field_replace(dns, "bootstrap_dns", bootstrap);
-    cJSON *fallback = cJSON_CreateArray();
-    cJSON_AddItemToArray(fallback, cJSON_CreateString("223.5.5.5"));
-    cJSON_AddItemToArray(fallback, cJSON_CreateString("119.29.29.29"));
-    json_field_replace(dns, "fallback_dns", fallback);
-    cJSON *edns = cJSON_CreateObject();
-    cJSON_AddItemToObject(edns, "enabled", cJSON_CreateTrue());
-    json_field_replace(dns, "edns_client_subnet", edns);
-    json_field_replace(dns, "cache_size", cJSON_CreateNumber(4194304)); // 4MiB cache
-    json_field_replace(dns, "cache_ttl_min", cJSON_CreateNumber(30)); // override min TTL 30s
-    json_field_replace(dns, "cache_ttl_max", cJSON_CreateNumber(300)); // override max TTL 300s
-    json_field_replace(dns, "cache_optimistic", cJSON_CreateTrue()); // optimistic cache
 
     char *config = cJSON_Print(json); // generate json string
     cJSON_free(json);
@@ -121,11 +110,11 @@ process* adguard_load(adguard *info, const char *dir) { // load adguard options
 
     if (!is_file_exist(adguard_config_file)) { // AdGuardHome configure not exist
         log_info("Create AdGuardHome configure");
-        adguard_config_ret = adguard_config(info, "{\"schema_version\": 27}");
+        adguard_config_ret = adguard_config(info, "{\"schema_version\": 27}", TRUE);
     } else { // configure exist -> modify
         char *adguard_config_content = read_file(adguard_config_file);
         char *adguard_config_json = to_json_format(adguard_config_content);
-        adguard_config_ret = adguard_config(info, adguard_config_json);
+        adguard_config_ret = adguard_config(info, adguard_config_json, FALSE);
         free(adguard_config_content);
         free(adguard_config_json);
     }
