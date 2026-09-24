@@ -393,3 +393,4 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
 - WSL 本地编译通过（`make` 100%，无新告警）；
 - 本地运行确认：默认配置含 `timeout: 5`，解析 `Domestic/Foreign timeout -> 5`，生成的 `domestic.json` / `foreign.json` 均含 `"timeout":"5s"`；
 - Update Assets 修复由 GitHub Actions workflow_dispatch 实测验证（见 CI 记录）；镜像构建与冒烟见 Docker Build 记录。
+- **补丁（2026-09-24，同日续修）**：`config_init` 中 domestic/foreign `timeout` 缺省默认由 0 改为 5。此前**已存在旧配置（无 `timeout` 字段）时解析为 0（不输出字段，回落 dnsproxy 内置 30s）**，生产卷内旧 cleardns.yml 升级后不会自动获得 5s；现改为未配置默认 5s（显式 `timeout: 0` 仍可禁用）。已用无 timeout 字段的旧配置实测：dump `timeout -> 5`、生成的 json 含 `"timeout":"5s"`。

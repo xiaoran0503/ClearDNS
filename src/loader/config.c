@@ -14,7 +14,7 @@ cleardns_config* config_init() { // init config struct of cleardns
     config->cache.optimistic = FALSE;
 
     config->domestic.port = DOMESTIC_PORT;
-    config->domestic.timeout = 0; // 0 = dnsproxy built-in default
+    config->domestic.timeout = 5; // default 5s when unset in cleardns.yml (explicit 0 = dnsproxy built-in default)
     config->domestic.ipv6 = TRUE;
     config->domestic.verify = TRUE;
     config->domestic.parallel = TRUE;
@@ -23,7 +23,7 @@ cleardns_config* config_init() { // init config struct of cleardns
     config->domestic.primary = string_list_init();
 
     config->foreign.port = FOREIGN_PORT;
-    config->foreign.timeout = 0; // 0 = dnsproxy built-in default
+    config->foreign.timeout = 5; // default 5s when unset in cleardns.yml (explicit 0 = dnsproxy built-in default)
     config->foreign.ipv6 = TRUE;
     config->foreign.verify = TRUE;
     config->foreign.parallel = TRUE;
