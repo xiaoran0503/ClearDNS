@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import urllib.request
+import urllib.error
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "")
 TOKEN = os.environ.get("GH_TOKEN", "")
@@ -174,32 +175,37 @@ def build_report(cur, latest):
 
 
 def ensure_issue(outdated):
-    """有更新时创建去重 issue（仅 CI 且有 token 时）"""
+    """有更新时创建去重 issue（仅 CI 且有 token 时）；Issues 未开启/无权限时降级为 warning，不 fail CI"""
     if not outdated:
         return
     if not (TOKEN and REPO):
         return
     title = f"[版本更新] ClearDNS 依赖有新版本 ({__import__('datetime').date.today().isoformat()})"
-    # 去重：已存在相同标题的 open issue 则跳过
-    issues = gh_api(f"/repos/{REPO}/issues?state=open&per_page=100")
-    if any(i.get("title") == title for i in issues):
-        return
-    body_lines = [
-        "自动版本核查发现以下组件有新版本：",
-        "",
-        "| 组件 | 当前 | 最新 | 类型 |",
-        "|---|---|---|---|",
-    ]
-    for _, label, cur, lat, kind in outdated:
-        body_lines.append(f"| {label} | {cur} | {lat} | {kind} |")
-    body_lines += [
-        "",
-        "> 大版本升级需由用户决策后再升级；overture 为 fork（另一会话维护），需先同步 fork 再评估。",
-        "> 本 issue 由 `.github/workflows/check-versions.yml` 自动生成。",
-    ]
-    gh_api(f"/repos/{REPO}/issues", payload={
-        "title": title, "body": "\n".join(body_lines), "labels": ["dependencies"],
-    })
+    try:
+        # 去重：已存在相同标题的 open issue 则跳过
+        issues = gh_api(f"/repos/{REPO}/issues?state=open&per_page=100")
+        if any(i.get("title") == title for i in issues):
+            return
+        body_lines = [
+            "自动版本核查发现以下组件有新版本：",
+            "",
+            "| 组件 | 当前 | 最新 | 类型 |",
+            "|---|---|---|---|",
+        ]
+        for _, label, cur, lat, kind in outdated:
+            body_lines.append(f"| {label} | {cur} | {lat} | {kind} |")
+        body_lines += [
+            "",
+            "> 大版本升级需由用户决策后再升级；overture 为 fork（另一会话维护），需先同步 fork 再评估。",
+            "> 本 issue 由 `.github/workflows/check-versions.yml` 自动生成。",
+        ]
+        gh_api(f"/repos/{REPO}/issues", payload={
+            "title": title, "body": "\n".join(body_lines), "labels": ["dependencies"],
+        })
+    except urllib.error.HTTPError as e:
+        print(f"⚠️ 自动创建 issue 失败（HTTP {e.code}）：仓库 Issues 可能未开启或 token 权限不足，已跳过。版本差异见上方表格 / job summary。", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️ 自动创建 issue 失败（{type(e).__name__}: {e}），已跳过。版本差异见上方表格 / job summary。", file=sys.stderr)
 
 
 def main():
