@@ -14,11 +14,11 @@ ARG GH_MIRROR=""
 ARG GOPROXY="https://proxy.golang.org,direct"
 ARG APT_MIRROR="deb.debian.org"
 
-# ---------------- dnsproxy (0.84.2) ----------------
+# ---------------- dnsproxy (0.85.0) ----------------
 FROM ${GOLANG} AS dnsproxy
 ARG GH_MIRROR
 ARG GOPROXY
-ENV DNSPROXY="0.84.2"
+ENV DNSPROXY="0.85.0"
 ENV GOPROXY="${GOPROXY}"
 WORKDIR /
 RUN wget ${GH_MIRROR}https://github.com/AdguardTeam/dnsproxy/archive/v${DNSPROXY}.tar.gz -O- | tar xz

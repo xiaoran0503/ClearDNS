@@ -394,3 +394,18 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
 - 本地运行确认：默认配置含 `timeout: 5`，解析 `Domestic/Foreign timeout -> 5`，生成的 `domestic.json` / `foreign.json` 均含 `"timeout":"5s"`；
 - Update Assets 修复由 GitHub Actions workflow_dispatch 实测验证（见 CI 记录）；镜像构建与冒烟见 Docker Build 记录。
 - **补丁（2026-09-24，同日续修）**：`config_init` 中 domestic/foreign `timeout` 缺省默认由 0 改为 5。此前**已存在旧配置（无 `timeout` 字段）时解析为 0（不输出字段，回落 dnsproxy 内置 30s）**，生产卷内旧 cleardns.yml 升级后不会自动获得 5s；现改为未配置默认 5s（显式 `timeout: 0` 仍可禁用）。已用无 timeout 字段的旧配置实测：dump `timeout -> 5`、生成的 json 含 `"timeout":"5s"`。
+
+## v2.0.14 (2026-09-29) — dnsproxy 0.85.0 + Check Versions workflow 容错
+
+### 变更
+
+1. **dnsproxy 0.84.2 → 0.85.0（小版本升级，经用户决策）**：Dockerfile `ENV DNSPROXY` 升级，源码编译产物随之更新。Check Versions 巡检 issue #1 记录的官方最新稳定版。
+2. **Check Versions workflow 红屏修复（2026-09-28 schedule 触发，7 秒失败）**：
+   - 根因：仓库 Issues 功能曾被关闭，脚本检测到 dnsproxy 有更新后尝试自动创建巡检 issue，GitHub 对禁用 Issues 的仓库 POST `/issues` 返回 **HTTP 410 Gone**，脚本未捕获直接 traceback exit 1；
+   - 修复：`.github/scripts/check-versions.py` 的 `ensure_issue()` 整体 try/except 容错——410/403（Issues 关闭/权限不足）及任何 API 异常仅打 warning 继续，版本核查表格照常输出到 job summary，**巡检结果不再依赖 issue 创建成功**；
+   - 同步通过 API 重新开启仓库 Issues（`has_issues=true`），修复后手动触发验证：run `36530862137` success，自动创建巡检 issue #1 成功。
+
+### 验证
+
+- Check Versions run `36530862137` success（head 08eb4fa）；issue #1「[版本更新] ClearDNS 依赖有新版本 (2026-09-29)」自动创建；
+- 镜像构建见 Docker Build CI 记录（dnsproxy 0.85.0 从源码 go build，CGO_ENABLED=0 静态产物，无 MIGRATION 破坏性变更）。
