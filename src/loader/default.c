@@ -23,6 +23,7 @@ adguard:\n\
 \n\
 domestic:\n\
   port: 4053\n\
+  timeout: 5\n\
   bootstrap: 223.5.5.5\n\
   primary:\n\
     - tls://dns.alidns.com\n\
@@ -33,6 +34,7 @@ domestic:\n\
 \n\
 foreign:\n\
   port: 6053\n\
+  timeout: 5\n\
   bootstrap: 8.8.8.8\n\
   primary:\n\
     - tls://dns.google\n\
@@ -42,7 +44,7 @@ foreign:\n\
     - 8.8.4.4\n\
 \n\
 assets:\n\
-  cron: \"0 4 * * *\"\n\
+  cron: \"0 5 * * *\"\n\
   update:\n\
     gfwlist.txt: https://cdn.dnomd343.top/cleardns/gfwlist.txt\n\
     china-ip.txt: https://cdn.dnomd343.top/cleardns/china-ip.txt\n\
@@ -58,7 +60,8 @@ void load_default_config(const char *config_file) {
     char *config_content = NULL;
     if (is_json_suffix(config_file)) { // convert to json format
         config_content = to_json_format(DEFAULT_CONFIG);
-    } else {
+    }
+    if (config_content == NULL) { // conversion failed (or plain YAML path)
         config_content = strdup(DEFAULT_CONFIG);
     }
     save_file(config_file, config_content);

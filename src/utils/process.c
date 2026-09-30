@@ -2,8 +2,10 @@
 #define _GNU_SOURCE // NOLINT
 #endif
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/prctl.h>
@@ -11,15 +13,18 @@
 #include "logger.h"
 #include "sundry.h"
 #include "process.h"
+#include "assets.h"
 #include "constant.h"
 #include "structure.h"
 
 process **process_list;
 
-uint8_t EXITED = FALSE;
-uint8_t EXITING = FALSE;
+volatile sig_atomic_t EXITED = FALSE;   // shared with signal handlers
+volatile sig_atomic_t EXITING = FALSE;  // shared with signal handlers
+volatile sig_atomic_t CHILD_EXIT = FALSE; // set by SIGCHLD handler, handled in main loop
 
 void get_sub_exit();
+void reap_sub_exit();
 void get_exit_signal();
 char* get_exit_msg(int status);
 void server_exit(int exit_code);
@@ -33,6 +38,18 @@ process* process_init(const char *caption, const char *bin) { // init process st
     proc->cmd = string_list_init();
     string_list_append(&proc->cmd, bin); // argv[0] normally be process file name
     proc->env = string_list_init(); // empty environment variable
+    // inherit minimal env (PATH/HOME/TZ/LANG) so subprocesses work outside docker defaults
+    extern char **environ;
+    static const char *inherit[] = {"PATH=", "HOME=", "TZ=", "LANG=", NULL};
+    for (char **e = environ; *e != NULL; ++e) {
+        for (int k = 0; inherit[k] != NULL; ++k) {
+            size_t elen = strlen(inherit[k]);
+            if (!strncmp(*e, inherit[k], elen)) {
+                string_list_append(&proc->env, *e);
+                break;
+            }
+        }
+    }
     proc->cwd = WORK_DIR; // current working directory
     return proc;
 }
@@ -95,20 +112,43 @@ void process_list_append(process *proc) { // add new process into process list
 }
 
 void process_list_run() { // start process list
-    signal(SIGINT, get_exit_signal); // catch Ctrl + C (2)
-    signal(SIGQUIT, get_exit_signal); // catch Ctrl + \ (3)
-    signal(SIGTERM, get_exit_signal); // catch exit signal (15)
-    signal(SIGCHLD, get_sub_exit); // callback when child process die
+    struct sigaction sa; // catch exit signals + SIGCHLD (SA_RESTART: don't EINTR slow syscalls)
+    memset(&sa, 0, sizeof(sa));
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    sa.sa_handler = get_exit_signal;
+    sigaction(SIGINT, &sa, NULL); // catch Ctrl + C (2)
+    sigaction(SIGQUIT, &sa, NULL); // catch Ctrl + \ (3)
+    sigaction(SIGTERM, &sa, NULL); // catch exit signal (15)
+    sa.sa_handler = get_sub_exit;
+    sigaction(SIGCHLD, &sa, NULL); // callback when child process die
     for (process **proc = process_list; *proc != NULL; ++proc) {
         process_exec(*proc);
     }
     log_info("Process start complete");
 }
 
-void process_list_daemon() {
+void process_list_daemon() { // daemon all process in main loop
+    sigset_t block_mask, empty_mask;
+    sigemptyset(&empty_mask);
+    sigemptyset(&block_mask);
+    sigaddset(&block_mask, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &block_mask, NULL); // block SIGCHLD while checking flag
     while (!EXITED) {
-        pause();
+        if (CHILD_EXIT) { // handle child exit out of signal context
+            CHILD_EXIT = FALSE;
+            sigprocmask(SIG_UNBLOCK, &block_mask, NULL); // keep child signal mask clean
+            reap_sub_exit();
+            sigprocmask(SIG_BLOCK, &block_mask, NULL);
+            continue;
+        }
+        if (assets_pending()) { // handle assets update out of signal context
+            assets_update_run();
+            continue;
+        }
+        sigsuspend(&empty_mask); // atomically unblock and wait for signal
     }
+    sigprocmask(SIG_UNBLOCK, &block_mask, NULL);
 }
 
 char* get_exit_msg(int status) { // get why the child process death
@@ -148,23 +188,35 @@ void server_exit(int exit_code) { // kill sub process and exit
     exit(exit_code);
 }
 
-void get_exit_signal() { // get SIGINT or SIGTERM signal
-    log_info("Get exit signal");
+void get_exit_signal(int sig) { // get SIGINT/SIGQUIT/SIGTERM signal
+    log_info("Get exit signal -> %d", sig);
     server_exit(EXIT_NORMAL); // normally exit
 }
 
-void get_sub_exit() { // catch child process exit
+void get_sub_exit() { // catch child process exit (async-signal-safe: only set flag)
+    CHILD_EXIT = TRUE;
+}
+
+void reap_sub_exit() { // handle child process exit in the main flow
     if (EXITING) {
         log_debug("Skip handle SIGCHLD");
         return;
     }
     int status;
+    int restarted = FALSE;
     log_debug("Start handle SIGCHLD");
     for (process **proc = process_list; *proc != NULL; ++proc) {
         if ((*proc)->pid == 0) {
             continue; // skip not running process
         }
         int wait_ret = waitpid((*proc)->pid, &status, WNOHANG); // non-blocking wait
+        if (wait_ret == -1 && errno == ECHILD) { // started process already reaped
+            log_warn("%s (PID = %d) already reaped -> restart", (*proc)->name, (*proc)->pid);
+            process_exec(*proc); // restart reaped process
+            log_info("%s restart complete", (*proc)->name);
+            restarted = TRUE;
+            continue;
+        }
         if (wait_ret == -1) { // process wait error
             log_perror("%s waitpid error -> ", (*proc)->name);
             server_exit(EXIT_WAIT_ERROR);
@@ -172,11 +224,13 @@ void get_sub_exit() { // catch child process exit
             char *exit_msg = get_exit_msg(status);
             log_warn("%s (PID = %d) -> %s", (*proc)->name, (*proc)->pid, exit_msg);
             free(exit_msg);
-            sleep(RESTART_DELAY); // reduce restart frequency
-            process_exec(*proc);
+            process_exec(*proc); // restart died process
             log_info("%s restart complete", (*proc)->name);
-            return; // skip following check
+            restarted = TRUE; // continue scanning remaining processes
         }
+    }
+    if (restarted) {
+        sleep(RESTART_DELAY); // reduce restart frequency (once per batch)
     }
     int wait_ret = waitpid(-1, &status, WNOHANG); // waitpid for all sub-process (non-blocking)
     if (wait_ret == -1) {

@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <limits.h>
 #include "cJSON.h"
 #include "logger.h"
 #include "sundry.h"
@@ -48,20 +50,28 @@ void json_field_replace(cJSON *entry, const char *key, cJSON *content) {
     }
 }
 
-int json_int_value(char *caption, cJSON *json) { // json int or string value -> int
+int json_int_value(char *caption, cJSON *json) { // json int or string value -> int (overflow-safe)
+    long long int_ret = 0;
     if (cJSON_IsNumber(json)) {
-        return json->valueint;
+        double d = json->valuedouble;
+        if (d < (double)INT32_MIN || d > (double)INT32_MAX) { // out of int32 range
+            log_fatal("`%s` number out of range", caption);
+        }
+        int_ret = (long long)d;
     } else if (cJSON_IsString(json)) {
         char *p;
-        int int_ret = (int)strtol(json->valuestring, &p, 10);
-        if (int_ret == 0 && strcmp(json->valuestring, "0") != 0) { // invalid number in string
+        errno = 0;
+        int_ret = strtoll(json->valuestring, &p, 10);
+        if (errno == ERANGE || p == json->valuestring || *p != '\0') { // overflow / non-numeric / trailing junk
             log_fatal("`%s` not a valid number", caption);
         }
-        return int_ret;
+        if (int_ret < INT32_MIN || int_ret > INT32_MAX) {
+            log_fatal("`%s` number out of range", caption);
+        }
     } else {
         log_fatal("`%s` must be number or string", caption);
     }
-    return 0; // never reach
+    return (int)int_ret; // never reach on error
 }
 
 uint8_t json_bool_value(char *caption, cJSON *json) { // json bool value -> bool

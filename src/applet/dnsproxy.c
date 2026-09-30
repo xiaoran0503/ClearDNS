@@ -21,6 +21,7 @@ dnsproxy* dnsproxy_init(uint16_t port) { // init dnsproxy options
     dnsproxy *info = (dnsproxy *)malloc(sizeof(dnsproxy));
     info->port = port;
     info->cache = 0; // disable cache in default
+    info->timeout = 0; // 0 = dnsproxy built-in default
     info->ipv6 = TRUE;
     info->debug = FALSE;
     info->verify = TRUE;
@@ -36,6 +37,7 @@ void dnsproxy_dump(const char *caption, dnsproxy *info) { // show dnsproxy optio
     char *str_dump;
     log_debug("%s port -> %u", caption, info->port);
     log_debug("%s cache -> %u", caption, info->cache);
+    log_debug("%s timeout -> %u", caption, info->timeout);
     log_debug("%s ipv6 -> %s", caption, show_bool(info->ipv6));
     log_debug("%s debug -> %s", caption, show_bool(info->debug));
     log_debug("%s verify -> %s", caption, show_bool(info->verify));
@@ -92,6 +94,12 @@ char* dnsproxy_config(dnsproxy *info) { // generate json configure from dnsproxy
     if (info->cache) {
         cJSON_AddTrueToObject(config, "cache"); // cache --(default)--> `false`
         cJSON_AddNumberToObject(config, "cache-size", info->cache);
+    }
+    if (info->timeout > 0) {
+        // upstream query timeout (seconds), dnsproxy `timeout` accepts "Ns" duration string
+        char *timeout_str = string_join(uint32_to_string(info->timeout), "s");
+        cJSON_AddStringToObject(config, "timeout", timeout_str);
+        free(timeout_str);
     }
     if (info->optimistic) {
         cJSON_AddTrueToObject(config, "cache-optimistic"); // cache-optimistic --(default)--> `false`

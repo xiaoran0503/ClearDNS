@@ -26,7 +26,12 @@ char* string_load(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     char *buf = NULL;
-    vasprintf(&buf, fmt, ap);
+    if (vasprintf(&buf, fmt, ap) < 0) { // memory allocate failed
+        va_end(ap);
+        log_error("string_load: vasprintf failed");
+        return NULL;
+    }
+    va_end(ap);
     return buf;
 }
 

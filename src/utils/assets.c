@@ -9,6 +9,8 @@
 #include "constant.h"
 #include "structure.h"
 
+static volatile sig_atomic_t ASSETS_PENDING = FALSE; // set by SIGALRM handler, handled in main loop
+
 asset **update_info;
 
 char **custom_gfwlist;
@@ -69,10 +71,25 @@ void assets_load(asset **info) { // load assets list
     *info = NULL; // disable old assets list
     assets_dump(update_info);
     log_info("Remote assets load success");
-    signal(SIGALRM, assets_update_entry); // receive SIGALRM signal
+    struct sigaction sa; // receive SIGALRM signal (SA_RESTART: don't EINTR slow syscalls)
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = assets_update_entry;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGALRM, &sa, NULL);
 }
 
-void assets_update_entry() { // receive SIGALRM for update all assets
+void assets_update_entry(int sig) { // receive SIGALRM -> async-signal-safe: only set flag
+    (void)sig;
+    ASSETS_PENDING = TRUE;
+}
+
+uint8_t assets_pending(void) { // whether assets update pending (checked in main loop)
+    return ASSETS_PENDING;
+}
+
+void assets_update_run(void) { // run assets update in main flow (not in signal context)
+    ASSETS_PENDING = FALSE;
     if (assets_size(update_info) == 0) { // empty assets list
         log_info("Skip update assets");
         return;
@@ -101,7 +118,7 @@ void assets_update_entry() { // receive SIGALRM for update all assets
     load_diverter_assets(); // load assets data into `WORK_DIR`
 
     log_info("Restart overture to apply new assets");
-    run_command("pgrep overture | xargs kill"); // restart overture
+    run_command("pgrep overture | xargs -r kill"); // -r: skip run when pgrep matches nothing (avoid bare `kill` usage noise)
     log_info("Assets update complete");
 }
 
@@ -124,11 +141,18 @@ void extract(const char *file) { // extract one asset file from `.tar.xz` file
     }
     free(output_file);
 
-    char *extract_cmd = string_load("tar xf %s %s -C %s", ASSETS_PKG, file, ASSETS_DIR);
+    char *extract_cmd = string_load("tar xf %s -C %s %s", ASSETS_PKG, ASSETS_DIR, file);
     if (run_command(extract_cmd)) {
         log_warn("Extract asset `%s` failed", file);
-    } else {
-        log_info("Extract asset `%s` success", file);
+        free(extract_cmd);
+        return;
     }
+    char *verify_file = string_join(ASSETS_DIR, file);
+    if (is_file_exist(verify_file)) {
+        log_info("Extract asset `%s` success", file);
+    } else {
+        log_warn("Extract asset `%s` verify failed", file);
+    }
+    free(verify_file);
     free(extract_cmd);
 }

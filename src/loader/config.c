@@ -14,6 +14,7 @@ cleardns_config* config_init() { // init config struct of cleardns
     config->cache.optimistic = FALSE;
 
     config->domestic.port = DOMESTIC_PORT;
+    config->domestic.timeout = 5; // default 5s when unset in cleardns.yml (explicit 0 = dnsproxy built-in default)
     config->domestic.ipv6 = TRUE;
     config->domestic.verify = TRUE;
     config->domestic.parallel = TRUE;
@@ -22,6 +23,7 @@ cleardns_config* config_init() { // init config struct of cleardns
     config->domestic.primary = string_list_init();
 
     config->foreign.port = FOREIGN_PORT;
+    config->foreign.timeout = 5; // default 5s when unset in cleardns.yml (explicit 0 = dnsproxy built-in default)
     config->foreign.ipv6 = TRUE;
     config->foreign.verify = TRUE;
     config->foreign.parallel = TRUE;
@@ -57,6 +59,7 @@ void config_dump(cleardns_config *config) { // dump config info of cleardns
     log_debug("Cache optimistic -> %s", show_bool(config->cache.optimistic));
 
     log_debug("Domestic port -> %u", config->domestic.port);
+    log_debug("Domestic timeout -> %u", config->domestic.timeout);
     log_debug("Domestic ipv6 -> %s", show_bool(config->domestic.ipv6));
     log_debug("Domestic verify -> %s", show_bool(config->domestic.verify));
     log_debug("Domestic parallel -> %s", show_bool(config->domestic.parallel));
@@ -65,6 +68,7 @@ void config_dump(cleardns_config *config) { // dump config info of cleardns
     string_list_debug("Domestic primary", config->domestic.primary);
 
     log_debug("Foreign port -> %u", config->foreign.port);
+    log_debug("Foreign timeout -> %u", config->foreign.timeout);
     log_debug("Foreign ipv6 -> %s", show_bool(config->foreign.ipv6));
     log_debug("Foreign verify -> %s", show_bool(config->foreign.verify));
     log_debug("Foreign parallel -> %s", show_bool(config->foreign.parallel));
@@ -80,7 +84,7 @@ void config_dump(cleardns_config *config) { // dump config info of cleardns
     log_debug("AdGuardHome port -> %u", config->adguard.port);
     log_debug("AdGuardHome enable -> %s", show_bool(config->adguard.enable));
     log_debug("AdGuardHome username -> %s", config->adguard.username);
-    log_debug("AdGuardHome password -> %s", config->adguard.password);
+    log_debug("AdGuardHome password -> *** (len=%zu)", strlen(config->adguard.password));
 
     log_debug("Assets disable -> %s", show_bool(config->assets.disable));
     log_debug("Assets update cron -> `%s`", config->assets.cron);

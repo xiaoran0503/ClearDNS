@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #include <sys/stat.h>
 #include "logger.h"
 #include "sundry.h"
@@ -10,7 +11,8 @@
 
 int run_command(const char *command) { // running command under system shell
     log_debug("Run command -> `%s`", command);
-    int ret_code = system(command) / 256;
+    int ret_status = system(command);
+    int ret_code = (ret_status != -1 && WIFEXITED(ret_status)) ? WEXITSTATUS(ret_status) : -1;
     if (ret_code != 0) {
         log_warn("Command `%s` return non-zero code %d", command, ret_code);
     }
@@ -74,7 +76,10 @@ char* read_file(const char *file) { // read file content
         log_fatal("No enough memory for reading file"); // file too large
     }
     rewind(fp);
-    fread(content, 1, length, fp); // read file stream
+    size_t read_len = fread(content, 1, length, fp); // read file stream
+    if (read_len != (size_t)length) {
+        log_fatal("File `%s` read error", file);
+    }
     content[length] = '\0'; // set end flag
     fclose(fp);
     log_debug("File `%s` read success ->\n%s", file, content);
