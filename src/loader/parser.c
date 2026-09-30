@@ -110,6 +110,29 @@ void diverter_parser(diverter_config *config, cJSON *json) { // diverter options
         if (!strcmp(json->string, "chinalist")) {
             config->chinalist = json_string_list_value("diverter.chinalist", json, config->chinalist);
         }
+        if (!strcmp(json->string, "route_cache")) {
+            if (!cJSON_IsObject(json)) {
+                log_fatal("`diverter.route_cache` must be object");
+            }
+            cJSON *item = json->child;
+            while (item != NULL) {
+                if (!strcmp(item->string, "size")) {
+                    int size = json_int_value("diverter.route_cache.size", item);
+                    if (size < 0 || size > 1048576) {
+                        log_fatal("`diverter.route_cache.size` must be in [0, 1048576]");
+                    }
+                    config->route_cache_size = (uint32_t)size;
+                }
+                if (!strcmp(item->string, "ttl")) {
+                    int ttl = json_int_value("diverter.route_cache.ttl", item);
+                    if (ttl < 0 || ttl > 86400) {
+                        log_fatal("`diverter.route_cache.ttl` must be in [0, 86400]");
+                    }
+                    config->route_cache_ttl = (uint32_t)ttl;
+                }
+                item = item->next;
+            }
+        }
         json = json->next; // next field
     }
 }

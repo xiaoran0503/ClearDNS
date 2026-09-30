@@ -433,3 +433,14 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
 
 - overlay `internal/ipgeo` 文案规则与私网跳过见 `format_test.go`（镜像构建不跑该测试）。
 - 推送 `master` 触发 Docker Build（`Dockerfile` / `patches/` 不在 `paths-ignore`）。
+
+## v2.0.17 (2026-09-30) — overture 2.6.0 + routeCache
+
+### 变更
+
+1. **overture fork 2.5.0 → 2.6.0**：Dockerfile `ENV OVERTURE` 升级。2.6 核心是可选域名表分流缓存 `routeCache`（默认关）；配置无新必填项，构建仍为 `go build ./main`。
+2. **ClearDNS 适配 / 增量开启**：`config_init` 默认 `diverter.route_cache.size=4096 ttl=600`。**已有 cleardns.yml 不含该字段时同样开启**（解析只覆盖出现的键）。新默认模板写入 `diverter.route_cache`。可在 yml 里改 size/ttl；`size: 0` 关闭。生成的 overture JSON 带上 `routeCache`。IP 反污染仍每次现查。不传 `cacheSize`，不启用 DoQ/DoH3/health check。
+
+### 验证
+
+- 镜像构建见 Docker Build CI 记录。

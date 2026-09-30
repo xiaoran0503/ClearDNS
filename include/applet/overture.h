@@ -12,6 +12,8 @@ typedef struct {
     char *host_file;
     uint16_t foreign_port;
     uint16_t domestic_port;
+    uint32_t route_cache_size;
+    uint32_t route_cache_ttl;
     uint32_t **reject_type;
     char *foreign_ip_file;
     char *domestic_ip_file;

@@ -14,6 +14,9 @@ cache:\n\
 \n\
 diverter:\n\
   port: 5353\n\
+  route_cache:\n\
+    size: 4096\n\
+    ttl: 600\n\
 \n\
 adguard:\n\
   enable: true\n\

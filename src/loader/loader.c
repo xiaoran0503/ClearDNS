@@ -64,6 +64,8 @@ overture* load_diverter(cleardns_config *config) {
     diverter->port = config->diverter.port;
     diverter->foreign_port = config->foreign.port;
     diverter->domestic_port = config->domestic.port;
+    diverter->route_cache_size = config->diverter.route_cache_size;
+    diverter->route_cache_ttl = config->diverter.route_cache_ttl;
 
     if (string_list_len(config->ttl)) {
         free(diverter->ttl_file);

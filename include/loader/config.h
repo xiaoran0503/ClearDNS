@@ -17,6 +17,8 @@ typedef struct {
 
 typedef struct {
     uint16_t port;
+    uint32_t route_cache_size;
+    uint32_t route_cache_ttl;
     char **gfwlist;
     char **china_ip;
     char **chinalist;

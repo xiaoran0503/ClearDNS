@@ -32,6 +32,8 @@ cleardns_config* config_init() { // init config struct of cleardns
     config->foreign.primary = string_list_init();
 
     config->diverter.port = DIVERTER_PORT;
+    config->diverter.route_cache_size = ROUTE_CACHE_SIZE;
+    config->diverter.route_cache_ttl = ROUTE_CACHE_TTL;
     config->diverter.gfwlist = string_list_init();
     config->diverter.china_ip = string_list_init();
     config->diverter.chinalist = string_list_init();
@@ -77,6 +79,8 @@ void config_dump(cleardns_config *config) { // dump config info of cleardns
     string_list_debug("Foreign primary", config->foreign.primary);
 
     log_debug("Diverter port -> %u", config->diverter.port);
+    log_debug("Diverter route cache size -> %u", config->diverter.route_cache_size);
+    log_debug("Diverter route cache ttl -> %u", config->diverter.route_cache_ttl);
     string_list_debug("Diverter gfwlist", config->diverter.gfwlist);
     string_list_debug("Diverter china-ip", config->diverter.china_ip);
     string_list_debug("Diverter chinalist", config->diverter.chinalist);

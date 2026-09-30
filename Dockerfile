@@ -27,11 +27,11 @@ RUN go mod download
 RUN env CGO_ENABLED=0 go build -v -trimpath -ldflags "-X github.com/AdguardTeam/golibs/version.version=${DNSPROXY} -s -w"
 RUN mv dnsproxy /tmp/
 
-# ---------------- overture (fork v2.5.0) ----------------
+# ---------------- overture (fork v2.6.0) ----------------
 FROM ${GOLANG} AS overture
 ARG GH_MIRROR
 ARG GOPROXY
-ENV OVERTURE="2.5.0"
+ENV OVERTURE="2.6.0"
 ENV GOPROXY="${GOPROXY}"
 WORKDIR /
 RUN wget ${GH_MIRROR}https://github.com/xiaoran0503/overture/archive/v${OVERTURE}.tar.gz -O- | tar xz

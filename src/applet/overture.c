@@ -30,6 +30,8 @@ overture* overture_init() { // init overture options
     info->host_file = NULL;
     info->foreign_port = FOREIGN_PORT;
     info->domestic_port = DOMESTIC_PORT;
+    info->route_cache_size = ROUTE_CACHE_SIZE;
+    info->route_cache_ttl = ROUTE_CACHE_TTL;
     info->reject_type = uint32_list_init();
     info->foreign_ip_file = strdup("/dev/null");
     info->domestic_ip_file = strdup("/dev/null");
@@ -47,6 +49,8 @@ void overture_dump(overture *info) { // show overture options in debug log
     log_debug("Overture host file -> %s", info->host_file);
     log_debug("Overture foreign port -> %u", info->foreign_port);
     log_debug("Overture domestic port -> %u", info->domestic_port);
+    log_debug("Overture route cache size -> %u", info->route_cache_size);
+    log_debug("Overture route cache ttl -> %u", info->route_cache_ttl);
     log_debug("Overture reject type -> %s", reject_type);
     log_debug("Overture foreign ip file -> %s", info->foreign_ip_file);
     log_debug("Overture domestic ip file -> %s", info->domestic_ip_file);
@@ -137,6 +141,12 @@ char* overture_config(overture *info) { // generate json configure from overture
     cJSON_AddStringToObject(domain_file, "alternative", info->foreign_domain_file);
     cJSON_AddStringToObject(domain_file, "matcher", "suffix-tree");
     cJSON_AddItemToObject(config, "domainFile", domain_file);
+
+    /* v2.6.0: cache chinalist/gfwlist decisions only; IP anti-pollution stays live */
+    cJSON *route_cache = cJSON_CreateObject();
+    cJSON_AddNumberToObject(route_cache, "size", info->route_cache_size);
+    cJSON_AddNumberToObject(route_cache, "ttl", info->route_cache_ttl);
+    cJSON_AddItemToObject(config, "routeCache", route_cache);
 
     cJSON *host_file = cJSON_CreateObject();
     if (info->host_file != NULL) {
