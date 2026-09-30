@@ -1,0 +1,140 @@
+diff --git a/client/src/__locales/en.json b/client/src/__locales/en.json
+index 9168341..b91a7e0 100644
+--- a/client/src/__locales/en.json
++++ b/client/src/__locales/en.json
+@@ -594,6 +594,7 @@
+   "response_code": "Response code",
+   "response_details": "Response details",
+   "response_table_header": "Response",
++  "answer_geo_table_header": "Geo",
+   "response_time": "Response time",
+   "rewrite_A": "<0>A</0>: special value, keep <0>A</0> records from the upstream",
+   "rewrite_AAAA": "<0>AAAA</0>: special value, keep <0>AAAA</0> records from the upstream",
+diff --git a/client/src/__locales/zh-cn.json b/client/src/__locales/zh-cn.json
+index f428e8e..d1be887 100644
+--- a/client/src/__locales/zh-cn.json
++++ b/client/src/__locales/zh-cn.json
+@@ -594,6 +594,7 @@
+   "response_code": "响应代码",
+   "response_details": "响应细节",
+   "response_table_header": "响应",
++  "answer_geo_table_header": "归属地",
+   "response_time": "响应时间",
+   "rewrite_A": "<0>A</0>：特殊值，保持来自上游的<0>A</0>记录",
+   "rewrite_AAAA": "<0>AAAA</0>：特殊值，保持来自上游的<0>AAAA</0>记录",
+diff --git a/client/src/components/Logs/Cells/Header.tsx b/client/src/components/Logs/Cells/Header.tsx
+index a8f8eb7..b34e325 100644
+--- a/client/src/components/Logs/Cells/Header.tsx
++++ b/client/src/components/Logs/Cells/Header.tsx
+@@ -28,6 +28,10 @@ const Header = () => {
+             className: 'logs__cell--response',
+             content: 'response_table_header',
+         },
++        {
++            className: 'logs__cell--geo',
++            content: 'answer_geo_table_header',
++        },
+         {
+             className: 'logs__cell--client',
+ 
+diff --git a/client/src/components/Logs/Cells/index.tsx b/client/src/components/Logs/Cells/index.tsx
+index d62dde2..f81bee1 100644
+--- a/client/src/components/Logs/Cells/index.tsx
++++ b/client/src/components/Logs/Cells/index.tsx
+@@ -33,6 +33,8 @@ import DomainCell from './DomainCell';
+ 
+ import ResponseCell from './ResponseCell';
+ 
++import GeoCell from './GeoCell';
++
+ import ClientCell from './ClientCell';
+ import { toggleClientBlock } from '../../../actions/access';
+ import { getBlockClientInfo, BUTTON_PREFIX } from './helpers';
+@@ -50,6 +52,7 @@ interface RowProps {
+         domain: string;
+         elapsedMs: string;
+         response: unknown[];
++        answerGeo?: string;
+         time: string;
+         tracker?: {
+             name: string;
+@@ -295,6 +298,8 @@ const Row = memo(
+ 
+                 <ResponseCell {...rowProps} />
+ 
++                <GeoCell {...rowProps} />
++
+                 <ClientCell {...rowProps} />
+             </div>
+         );
+diff --git a/client/src/components/Logs/Logs.css b/client/src/components/Logs/Logs.css
+index 4203615..24113f6 100644
+--- a/client/src/components/Logs/Logs.css
++++ b/client/src/components/Logs/Logs.css
+@@ -7,6 +7,7 @@
+     --size-date: 70;
+     --size-domain: 180;
+     --size-response: 150;
++    --size-geo: 90;
+     --size-client: 123;
+     --gray-216: rgba(216, 216, 216, 0.23);
+     --gray-4d: #4d4d4d;
+@@ -203,6 +204,7 @@
+ 
+ @media screen and (max-width: 767.98px) {
+     .logs__table .logs__cell--response,
++    .logs__table .logs__cell--geo,
+     .logs__table .logs__cell--client {
+         display: none !important;
+     }
+@@ -240,6 +242,11 @@
+     flex: var(--size-response) 0 auto;
+ }
+ 
++.logs__cell--geo {
++    width: 5.625rem;
++    flex: var(--size-geo) 0 auto;
++}
++
+ .logs__cell--client {
+     width: 7.6875rem;
+     flex: var(--size-client) 0 auto;
+@@ -442,6 +449,7 @@
+ }
+ 
+ .logs__table .logs__cell--response,
++.logs__table .logs__cell--geo,
+ .logs__table .logs__cell--client {
+     display: flex;
+ }
+diff --git a/client/src/helpers/helpers.tsx b/client/src/helpers/helpers.tsx
+index d3e9eea..9b56a21 100644
+--- a/client/src/helpers/helpers.tsx
++++ b/client/src/helpers/helpers.tsx
+@@ -85,11 +85,16 @@ export const normalizeLogs = (logs: any) =>
+         const processResponse = (data: any) =>
+             data
+                 ? data.map((response: any) => {
+-                      const { value, type, ttl } = response;
+-                      return `${type}: ${value} (ttl=${ttl})`;
++                      const { value, type, ttl, geo } = response;
++                      const base = `${type}: ${value} (ttl=${ttl})`;
++                      return geo ? `${base} ${geo}` : base;
+                   })
+                 : [];
+ 
++        const answerGeo = Array.isArray(answer)
++            ? (answer.find((item: any) => item?.geo)?.geo ?? '')
++            : '';
++
+         let newRules = rules;
+         /* TODO 'filterId' and 'rule' are deprecated, will be removed in 0.106 */
+         if (rule !== undefined && filterId !== undefined && rules !== undefined && rules.length === 0) {
+@@ -105,6 +110,7 @@ export const normalizeLogs = (logs: any) =>
+             unicodeName,
+             type,
+             response: processResponse(answer),
++            answerGeo,
+             reason,
+             client,
+             client_proto,

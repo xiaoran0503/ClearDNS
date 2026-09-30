@@ -420,3 +420,16 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
 ### 验证
 
 - 镜像构建见 Docker Build CI 记录（overture 2.5.0 从源码 `go build ./main`，CGO_ENABLED=0 静态产物）。
+
+## v2.0.16 (2026-09-30) — AdGuard Home 查询日志应答 IP 归属地
+
+### 变更
+
+1. **查询日志应答归属地（离线 ip2region）**：自编译 AdGuard Home v0.107.79 在查询日志 API 展示时为 A/AAAA 应答附加 `geo`（不写入 `querylog.json`，不走客户端 WHOIS）。详情弹窗/桌面 tooltip 跟在每条 A/AAAA 后面；表格在「响应」与「客户端」之间新增「归属地」列，显示第一条 A/AAAA 的省市+运营商（如 `北京 百度` / `美国 Cloudflare`）。CNAME/PTR/内网/查不到为 `-`。
+2. **AGH 定制收口到 `patches/adguardhome/`**：新文件 overlay 拷贝，既有文件 git patch；原 Dockerfile 一行 `Header.css` 藏导航迁入 `0001-header-hide-nav.patch`。ip2region golang `xdb` searcher vendor 进 overlay，不改 AGH `go.mod`。
+3. **镜像附带官方 xdb**：构建期下载 `ip2region_v4.xdb` / `ip2region_v6.xdb` 到 `/usr/share/ip2region/`（可用 `IP2REGION_V4`/`V6` 覆盖）。xdb 缺失时 AGH 仍启动，归属地为空。
+
+### 验证
+
+- overlay `internal/ipgeo` 文案规则与私网跳过见 `format_test.go`（镜像构建不跑该测试）。
+- 推送 `master` 触发 Docker Build（`Dockerfile` / `patches/` 不在 `paths-ignore`）。

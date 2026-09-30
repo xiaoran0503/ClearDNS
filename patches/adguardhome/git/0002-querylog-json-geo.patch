@@ -1,0 +1,30 @@
+diff --git a/internal/querylog/json.go b/internal/querylog/json.go
+index a93665c..90ecd03 100644
+--- a/internal/querylog/json.go
++++ b/internal/querylog/json.go
+@@ -10,6 +10,7 @@ import (
+ 
+ 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
+ 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
++	"github.com/AdguardTeam/AdGuardHome/internal/ipgeo"
+ 	"github.com/AdguardTeam/golibs/logutil/slogutil"
+ 	"github.com/miekg/dns"
+ 	"golang.org/x/net/idna"
+@@ -189,6 +190,7 @@ type dnsAnswer struct {
+ 	Type  string `json:"type"`
+ 	Value string `json:"value"`
+ 	TTL   uint32 `json:"ttl"`
++	Geo   string `json:"geo,omitempty"`
+ }
+ 
+ // answerToJSON converts the answer records of msg, if any, to their JSON form.
+@@ -207,6 +209,9 @@ func answerToJSON(msg *dns.Msg) (answers []*dnsAnswer) {
+ 			Value: strings.TrimPrefix(rr.String(), header.String()),
+ 			TTL:   header.Ttl,
+ 		}
++		if header.Rrtype == dns.TypeA || header.Rrtype == dns.TypeAAAA {
++			a.Geo = ipgeo.Lookup(strings.TrimSpace(a.Value))
++		}
+ 
+ 		answers = append(answers, a)
+ 	}

@@ -46,13 +46,15 @@ ARG GH_MIRROR
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV ADGUARD="0.107.79"
 RUN git clone ${GH_MIRROR}https://github.com/AdguardTeam/AdGuardHome.git -b v${ADGUARD} --depth=1
+COPY patches/adguardhome/overlay/ /AdGuardHome/
+COPY patches/adguardhome/git/ /tmp/agh-patches/
+RUN git config --global --add safe.directory /AdGuardHome && git -C /AdGuardHome apply --verbose /tmp/agh-patches/*.patch
 
 # ---------------- AdGuardHome 前端资源 ----------------
 FROM ${NODE} AS adguard-web
 RUN apt-get update && apt-get install -y --no-install-recommends make && rm -rf /var/lib/apt/lists/*
 COPY --from=adguard-src /AdGuardHome/ /AdGuardHome/
 WORKDIR /AdGuardHome/
-RUN echo '.nav-item .order-4 {display: none;}' >> ./client/src/components/Header/Header.css
 RUN make js-deps
 RUN make js-build
 RUN mv ./build/static/ /tmp/
@@ -89,6 +91,14 @@ WORKDIR /cleardns/bin/
 RUN cmake .. && make && strip cleardns
 RUN mv cleardns /tmp/
 
+# ---------------- ip2region 离线库（查询日志应答归属地，不进 git） ----------------
+FROM ${DEBIAN} AS ip2region
+ARG GH_MIRROR
+RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /usr/share/ip2region && \
+    wget -nv -O /usr/share/ip2region/ip2region_v4.xdb ${GH_MIRROR}https://github.com/lionsoul2014/ip2region/raw/master/data/ip2region_v4.xdb && \
+    wget -nv -O /usr/share/ip2region/ip2region_v6.xdb ${GH_MIRROR}https://github.com/lionsoul2014/ip2region/raw/master/data/ip2region_v6.xdb
+
 # ---------------- 分流资源文件（仓库自动维护，直连） ----------------
 FROM ${DEBIAN} AS assets
 ARG GH_MIRROR
@@ -114,5 +124,6 @@ FROM ${DEBIAN}
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates cron procps findutils xz-utils && rm -rf /var/lib/apt/lists/*
 RUN ln -sf /usr/sbin/cron /usr/sbin/crond
 COPY --from=release /release/ /
+COPY --from=ip2region /usr/share/ip2region/ /usr/share/ip2region/
 WORKDIR /cleardns/
 ENTRYPOINT ["cleardns"]
