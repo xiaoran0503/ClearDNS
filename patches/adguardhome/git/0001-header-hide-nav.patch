@@ -1,10 +1,22 @@
-diff --git a/client/src/components/Header/Header.css b/client/src/components/Header/Header.css
-index 93d45f3..72acdff 100644
---- a/client/src/components/Header/Header.css
-+++ b/client/src/components/Header/Header.css
-@@ -205,3 +205,5 @@
-     padding: 0.35em 0.5em;
-     line-height: 10px;
- }
-+
-+.nav-item .order-4 {display: none;}
+diff --git a/client_v2/src/common/ui/Menu/Menu.tsx b/client_v2/src/common/ui/Menu/Menu.tsx
+index ae74aa1..bbf8487 100644
+--- a/client_v2/src/common/ui/Menu/Menu.tsx
++++ b/client_v2/src/common/ui/Menu/Menu.tsx
+@@ -127,17 +127,6 @@ export const Menu = (props: Props) => {
+                         <span class={theme.common.textOverflow}>{intl.getMessage('logs')}</span>
+                     </Link>
+                 </div>
+-                <div class={cn(s.menuLinkWrapper)}>
+-                    <Link
+-                        class={cn(s.menuLink, { [s.activeLink]: isActive(Paths.Guide) })}
+-                        to={RoutePath.Guide}
+-                    >
+-                        <Icon class={s.linkIcon} icon="faq" />
+-                        <span class={theme.common.textOverflow}>
+-                            {intl.getMessage('setup_guide')}
+-                        </span>
+-                    </Link>
+-                </div>
+             </nav>
+             <div class={s.referenceWrapper}>
+                 <div class={cn(s.menuLinkWrapper)}>

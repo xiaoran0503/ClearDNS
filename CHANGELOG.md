@@ -444,3 +444,14 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
 ### 验证
 
 - 镜像构建见 Docker Build CI 记录。
+
+## v2.0.18 (2026-09-30) — 修复查询日志归属地未生效
+
+### 变更
+
+1. **根因**：AdGuard Home v0.107.79 的 `make js-build` 编译的是 **`client_v2`**（SolidJS：时间/请求/状态/原因/客户端），v2.0.16 补丁打在已废弃的 `client/` 上，所以页面完全看不到归属地。
+2. **修复**：UI 补丁改打 `client_v2`（表格「原因」后加「归属地」列、详情弹窗 A/AAAA 后跟 geo）。后端 `answer[].geo` 补丁不变。隐藏安装向导改为去掉 `client_v2` Menu 的 setup_guide。
+
+### 验证
+
+- 推送 `master` 触发 Docker Build；部署后查询日志应出现「归属地」列，详情如 `A: 172.67.147.11 (ttl=300) 美国 Cloudflare`。

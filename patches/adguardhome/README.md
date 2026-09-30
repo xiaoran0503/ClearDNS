@@ -10,9 +10,9 @@ Keep AGH customizations here. Do not edit AdGuard Home in the image by hand.
 
 - `overlay/` — new files copied into the AGH source tree
   - `internal/ipgeo/` — offline ip2region lookup (vendored `xdb` searcher)
-  - `client/src/components/Logs/Cells/GeoCell.tsx` — query-log geo column
+  - `client_v2/src/components/QueryLog/blocks/LogTable/blocks/GeoCell.tsx` — query-log geo column (AGH 0.107.79 builds `client_v2`, not legacy `client/`)
 - `git/` — unified diffs against upstream files
-  - `0001-header-hide-nav.patch` — hide setup nav (former Dockerfile echo)
+  - `0001-header-hide-nav.patch` — hide setup_guide in `client_v2` Menu
   - `0002-querylog-json-geo.patch` — add `answer[].geo` at API display time
   - `0003-querylog-ui-geo.patch` — table column + tooltip/modal geo text
 
@@ -24,15 +24,14 @@ Keep AGH customizations here. Do not edit AdGuard Home in the image by hand.
 4. If `git apply` conflicts, fix the files in the clone, then regenerate:
 
    ```sh
-   git -C AdGuardHome diff -- client/src/components/Header/Header.css > git/0001-header-hide-nav.patch
+   git -C AdGuardHome diff -- client_v2/src/common/ui/Menu/Menu.tsx > git/0001-header-hide-nav.patch
    git -C AdGuardHome diff -- internal/querylog/json.go > git/0002-querylog-json-geo.patch
    git -C AdGuardHome diff -- \
-     client/src/helpers/helpers.tsx \
-     client/src/components/Logs/Cells/Header.tsx \
-     client/src/components/Logs/Cells/index.tsx \
-     client/src/components/Logs/Logs.css \
-     client/src/__locales/en.json \
-     client/src/__locales/zh-cn.json \
+     client_v2/src/api/model/dnsAnswer.ts \
+     client_v2/src/helpers/helpers.tsx \
+     client_v2/src/components/QueryLog \
+     client_v2/src/__locales/en.json \
+     client_v2/src/__locales/zh-cn.json \
      > git/0003-querylog-ui-geo.patch
    ```
 

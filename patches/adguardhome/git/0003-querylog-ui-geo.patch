@@ -1,140 +1,162 @@
-diff --git a/client/src/__locales/en.json b/client/src/__locales/en.json
-index 9168341..b91a7e0 100644
---- a/client/src/__locales/en.json
-+++ b/client/src/__locales/en.json
-@@ -594,6 +594,7 @@
-   "response_code": "Response code",
-   "response_details": "Response details",
-   "response_table_header": "Response",
+diff --git a/client_v2/src/__locales/en.json b/client_v2/src/__locales/en.json
+index e86f5af..17ee64d 100644
+--- a/client_v2/src/__locales/en.json
++++ b/client_v2/src/__locales/en.json
+@@ -571,6 +571,7 @@
+   "query_log_safe_search": "Safe search",
+   "query_log_strict_search": "Use double quotes for strict search",
+   "reason_table_header": "Reason",
 +  "answer_geo_table_header": "Geo",
-   "response_time": "Response time",
-   "rewrite_A": "<0>A</0>: special value, keep <0>A</0> records from the upstream",
-   "rewrite_AAAA": "<0>AAAA</0>: special value, keep <0>AAAA</0> records from the upstream",
-diff --git a/client/src/__locales/zh-cn.json b/client/src/__locales/zh-cn.json
-index f428e8e..d1be887 100644
---- a/client/src/__locales/zh-cn.json
-+++ b/client/src/__locales/zh-cn.json
-@@ -594,6 +594,7 @@
-   "response_code": "响应代码",
-   "response_details": "响应细节",
-   "response_table_header": "响应",
+   "refresh_btn": "Refresh",
+   "refresh_statics": "Refresh statistics",
+   "release_notes": "Release notes",
+diff --git a/client_v2/src/__locales/zh-cn.json b/client_v2/src/__locales/zh-cn.json
+index 0cc7678..4fefe76 100644
+--- a/client_v2/src/__locales/zh-cn.json
++++ b/client_v2/src/__locales/zh-cn.json
+@@ -644,6 +644,7 @@
+   "rate_limit_subnet_len_ipv4_error": "IPv4 子网前缀长度应介于 0 到 32 之间",
+   "rate_limit_subnet_len_ipv6_error": "IPv6 子网前缀长度应介于 0 到 128 之间",
+   "reason_table_header": "原因",
 +  "answer_geo_table_header": "归属地",
-   "response_time": "响应时间",
-   "rewrite_A": "<0>A</0>：特殊值，保持来自上游的<0>A</0>记录",
-   "rewrite_AAAA": "<0>AAAA</0>：特殊值，保持来自上游的<0>AAAA</0>记录",
-diff --git a/client/src/components/Logs/Cells/Header.tsx b/client/src/components/Logs/Cells/Header.tsx
-index a8f8eb7..b34e325 100644
---- a/client/src/components/Logs/Cells/Header.tsx
-+++ b/client/src/components/Logs/Cells/Header.tsx
-@@ -28,6 +28,10 @@ const Header = () => {
-             className: 'logs__cell--response',
-             content: 'response_table_header',
+   "refresh_btn": "刷新",
+   "refresh_statics": "刷新统计数据",
+   "release_notes": "更新日志",
+diff --git a/client_v2/src/api/model/dnsAnswer.ts b/client_v2/src/api/model/dnsAnswer.ts
+index 7a484ea..43a9709 100644
+--- a/client_v2/src/api/model/dnsAnswer.ts
++++ b/client_v2/src/api/model/dnsAnswer.ts
+@@ -5,4 +5,5 @@ export interface DnsAnswer {
+     ttl?: number;
+     type?: string;
+     value?: string;
++    geo?: string;
+ }
+diff --git a/client_v2/src/components/QueryLog/blocks/DetailModal/DetailModal.tsx b/client_v2/src/components/QueryLog/blocks/DetailModal/DetailModal.tsx
+index 849a275..e0a44ab 100644
+--- a/client_v2/src/components/QueryLog/blocks/DetailModal/DetailModal.tsx
++++ b/client_v2/src/components/QueryLog/blocks/DetailModal/DetailModal.tsx
+@@ -41,20 +41,19 @@ type Props = {
+     onAllowService: (serviceId: string) => void;
+ };
+ 
+-const formatResponses = (responses: { value?: string; type?: string; ttl?: number }[] = []) =>
++const formatResponses = (
++    responses: { value?: string; type?: string; ttl?: number; geo?: string }[] = [],
++) =>
+     responses
+-        .map(({ type, value, ttl }) => {
++        .map(({ type, value, ttl, geo }) => {
+             if (!value) {
+                 return '';
+             }
+ 
+             const entry = [type, value].filter(Boolean).join(': ');
++            const withTtl = ttl || ttl === 0 ? `${entry} (ttl=${ttl})` : entry;
+ 
+-            if (ttl || ttl === 0) {
+-                return `${entry} (ttl=${ttl})`;
+-            }
+-
+-            return entry;
++            return geo ? `${withTtl} ${geo}` : withTtl;
+         })
+         .filter(Boolean);
+ 
+diff --git a/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.module.pcss b/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.module.pcss
+index d3d9566..42549e0 100644
+--- a/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.module.pcss
++++ b/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.module.pcss
+@@ -169,6 +169,7 @@
+ 
+ .statusCell,
+ .reasonCell,
++.geoCell,
+ .clientCell {
+     display: flex;
+     flex-direction: column;
+@@ -316,3 +317,9 @@
+     width: 48px;
+     height: 48px;
+ }
++
++.geoLabel {
++    overflow: hidden;
++    text-overflow: ellipsis;
++    white-space: nowrap;
++}
+diff --git a/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.tsx b/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.tsx
+index 7c83889..623b3b5 100644
+--- a/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.tsx
++++ b/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.tsx
+@@ -11,7 +11,7 @@ import { hasPersistentClient, isBlockedReason } from 'panel/components/QueryLog/
+ import { Filter } from 'panel/helpers/helpers';
+ import { InfiniteScrollTrigger } from '../InfiniteScrollTrigger';
+ import { EmptyState, type EmptyStateMode } from '../EmptyState/EmptyState';
+-import { ClientCell, RequestCell, ReasonCell, StatusCell, TimeCell } from './blocks';
++import { ClientCell, GeoCell, RequestCell, ReasonCell, StatusCell, TimeCell } from './blocks';
+ 
+ import s from './LogTable.module.pcss';
+ import { ActionsMenu } from '../ActionsMenu';
+@@ -83,6 +83,13 @@ export const LogTable = (props: Props) => {
+             width: 'minmax(136px, 0.9fr)',
+             sortable: false,
          },
 +        {
-+            className: 'logs__cell--geo',
-+            content: 'answer_geo_table_header',
++            key: 'geo',
++            header: { text: intl.getMessage('answer_geo_table_header') },
++            render: (_value: unknown, row: NormalizedQueryLogItem) => <GeoCell row={row} />,
++            width: 'minmax(90px, 0.6fr)',
++            sortable: false,
 +        },
          {
-             className: 'logs__cell--client',
+             key: 'client',
+             header: { text: intl.getMessage('client_table_header') },
+diff --git a/client_v2/src/components/QueryLog/blocks/LogTable/blocks/index.ts b/client_v2/src/components/QueryLog/blocks/LogTable/blocks/index.ts
+index 95bd093..c9d87b4 100644
+--- a/client_v2/src/components/QueryLog/blocks/LogTable/blocks/index.ts
++++ b/client_v2/src/components/QueryLog/blocks/LogTable/blocks/index.ts
+@@ -3,3 +3,4 @@ export { RequestCell } from './RequestCell';
+ export { StatusCell } from './StatusCell';
+ export { ReasonCell } from './ReasonCell';
+ export { ClientCell } from './ClientCell';
++export { GeoCell } from './GeoCell';
+diff --git a/client_v2/src/components/QueryLog/types.ts b/client_v2/src/components/QueryLog/types.ts
+index dd37533..18e95a8 100644
+--- a/client_v2/src/components/QueryLog/types.ts
++++ b/client_v2/src/components/QueryLog/types.ts
+@@ -4,6 +4,7 @@ export type ResponseEntry = {
+     value?: string;
+     type?: string;
+     ttl?: number;
++    geo?: string;
+ };
  
-diff --git a/client/src/components/Logs/Cells/index.tsx b/client/src/components/Logs/Cells/index.tsx
-index d62dde2..f81bee1 100644
---- a/client/src/components/Logs/Cells/index.tsx
-+++ b/client/src/components/Logs/Cells/index.tsx
-@@ -33,6 +33,8 @@ import DomainCell from './DomainCell';
+ export type WhoisInfo = {
+diff --git a/client_v2/src/helpers/helpers.tsx b/client_v2/src/helpers/helpers.tsx
+index 7633851..4702600 100644
+--- a/client_v2/src/helpers/helpers.tsx
++++ b/client_v2/src/helpers/helpers.tsx
+@@ -39,6 +39,7 @@ export type NormalizedDnsResponse = {
+     value?: string;
+     type?: string;
+     ttl?: number;
++    geo?: string;
+ };
  
- import ResponseCell from './ResponseCell';
- 
-+import GeoCell from './GeoCell';
-+
- import ClientCell from './ClientCell';
- import { toggleClientBlock } from '../../../actions/access';
- import { getBlockClientInfo, BUTTON_PREFIX } from './helpers';
-@@ -50,6 +52,7 @@ interface RowProps {
-         domain: string;
-         elapsedMs: string;
-         response: unknown[];
-+        answerGeo?: string;
-         time: string;
-         tracker?: {
-             name: string;
-@@ -295,6 +298,8 @@ const Row = memo(
- 
-                 <ResponseCell {...rowProps} />
- 
-+                <GeoCell {...rowProps} />
-+
-                 <ClientCell {...rowProps} />
-             </div>
-         );
-diff --git a/client/src/components/Logs/Logs.css b/client/src/components/Logs/Logs.css
-index 4203615..24113f6 100644
---- a/client/src/components/Logs/Logs.css
-+++ b/client/src/components/Logs/Logs.css
-@@ -7,6 +7,7 @@
-     --size-date: 70;
-     --size-domain: 180;
-     --size-response: 150;
-+    --size-geo: 90;
-     --size-client: 123;
-     --gray-216: rgba(216, 216, 216, 0.23);
-     --gray-4d: #4d4d4d;
-@@ -203,6 +204,7 @@
- 
- @media screen and (max-width: 767.98px) {
-     .logs__table .logs__cell--response,
-+    .logs__table .logs__cell--geo,
-     .logs__table .logs__cell--client {
-         display: none !important;
-     }
-@@ -240,6 +242,11 @@
-     flex: var(--size-response) 0 auto;
- }
- 
-+.logs__cell--geo {
-+    width: 5.625rem;
-+    flex: var(--size-geo) 0 auto;
-+}
-+
- .logs__cell--client {
-     width: 7.6875rem;
-     flex: var(--size-client) 0 auto;
-@@ -442,6 +449,7 @@
- }
- 
- .logs__table .logs__cell--response,
-+.logs__table .logs__cell--geo,
- .logs__table .logs__cell--client {
-     display: flex;
- }
-diff --git a/client/src/helpers/helpers.tsx b/client/src/helpers/helpers.tsx
-index d3e9eea..9b56a21 100644
---- a/client/src/helpers/helpers.tsx
-+++ b/client/src/helpers/helpers.tsx
-@@ -85,11 +85,16 @@ export const normalizeLogs = (logs: any) =>
-         const processResponse = (data: any) =>
-             data
-                 ? data.map((response: any) => {
+ export type NormalizedQueryLogItem = {
+@@ -129,12 +130,13 @@ export const normalizeLogs = (logs: QueryLogItem[]): NormalizedQueryLogItem[] =>
+         const processResponse = (data: DnsAnswer[] | undefined): NormalizedDnsResponse[] =>
+             Array.isArray(data)
+                 ? data.map((response: DnsAnswer) => {
 -                      const { value, type, ttl } = response;
--                      return `${type}: ${value} (ttl=${ttl})`;
 +                      const { value, type, ttl, geo } = response;
-+                      const base = `${type}: ${value} (ttl=${ttl})`;
-+                      return geo ? `${base} ${geo}` : base;
+ 
+                       return {
+                           value,
+                           type,
+                           ttl,
++                          geo,
+                       };
                    })
                  : [];
- 
-+        const answerGeo = Array.isArray(answer)
-+            ? (answer.find((item: any) => item?.geo)?.geo ?? '')
-+            : '';
-+
-         let newRules = rules;
-         /* TODO 'filterId' and 'rule' are deprecated, will be removed in 0.106 */
-         if (rule !== undefined && filterId !== undefined && rules !== undefined && rules.length === 0) {
-@@ -105,6 +110,7 @@ export const normalizeLogs = (logs: any) =>
-             unicodeName,
-             type,
-             response: processResponse(answer),
-+            answerGeo,
-             reason,
-             client,
-             client_proto,
