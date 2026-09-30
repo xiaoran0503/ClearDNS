@@ -409,3 +409,14 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
 
 - Check Versions run `36530862137` success（head 08eb4fa）；issue #1「[版本更新] ClearDNS 依赖有新版本 (2026-09-29)」自动创建；
 - 镜像构建见 Docker Build CI 记录（dnsproxy 0.85.0 从源码 go build，CGO_ENABLED=0 静态产物，无 MIGRATION 破坏性变更）。
+
+## v2.0.15 (2026-09-30) — overture 2.5.0
+
+### 变更
+
+1. **overture fork 2.0.9 → 2.5.0（小版本升级，经用户决策）**：Dockerfile `ENV OVERTURE` 升级，源码编译产物随之更新。fork 已发布 v2.5.0；`MIGRATION.md` 明确 v2.0.9 之后均为纯增量，默认配置行为不变。
+2. **ClearDNS 适配**：无。分流器仍生成既有 JSON（本机 UDP 4053/6053、alternativeDNSConcurrent=true），不启用 DoQ/DoH3/health check/sequential failover。加密上游继续由 dnsproxy 承担。
+
+### 验证
+
+- 镜像构建见 Docker Build CI 记录（overture 2.5.0 从源码 `go build ./main`，CGO_ENABLED=0 静态产物）。
