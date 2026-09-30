@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 4.2)
 
 project(cleardns LANGUAGES C)
 
@@ -30,8 +30,9 @@ endmacro()
 
 set(VERSION "")
 git_tag(VERSION)
-if(VERSION STREQUAL "")  # without git tag
-    message(FATAL_ERROR "Unable to get version information")
+if(VERSION STREQUAL "")  # without git metadata (source tarball / shallow copy)
+    set(VERSION "unknown")
+    message(WARNING "Unable to get version from git describe, fallback to `unknown`")
 endif()
 
 ###############################################################
