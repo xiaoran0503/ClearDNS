@@ -1,27 +1,29 @@
 ARG ALPINE="alpine:3.22"
 ARG NODE="node:20-alpine3.22"
 ARG RUST="rust:1.90-alpine3.22"
-ARG GOLANG="golang:1.25-alpine3.22"
+ARG GOLANG="golang:1.27-alpine3.22"
 
 FROM ${GOLANG} AS dnsproxy
-ENV DNSPROXY="0.76.1"
+ENV DNSPROXY="0.85.0"
+WORKDIR /
 RUN wget https://github.com/AdguardTeam/dnsproxy/archive/v${DNSPROXY}.tar.gz -O- | tar xz
-WORKDIR ./dnsproxy-${DNSPROXY}/
-RUN go get
-RUN env CGO_ENABLED=0 go build -v -trimpath -ldflags "-X main.VersionString=${DNSPROXY} -s -w"
+WORKDIR /dnsproxy-${DNSPROXY}/
+RUN go mod download
+RUN env CGO_ENABLED=0 go build -v -trimpath -ldflags "-X github.com/AdguardTeam/golibs/version.version=${DNSPROXY} -s -w"
 RUN mv dnsproxy /tmp/
 
 FROM ${GOLANG} AS overture
 ENV OVERTURE="1.8"
+WORKDIR /
 RUN wget https://github.com/shawn1m/overture/archive/v${OVERTURE}.tar.gz -O- | tar xz
-WORKDIR ./overture-${OVERTURE}/main/
+WORKDIR /overture-${OVERTURE}/main/
 RUN go get
 RUN env CGO_ENABLED=0 go build -v -trimpath -ldflags "-X main.version=v${OVERTURE} -s -w"
 RUN mv main /tmp/overture
 
 FROM ${ALPINE} AS adguard-src
 RUN apk add git
-ENV ADGUARD="0.107.66"
+ENV ADGUARD="0.107.79"
 RUN git clone https://github.com/AdguardTeam/AdGuardHome.git -b v${ADGUARD} --depth=1
 
 FROM ${NODE} AS adguard-web
@@ -37,9 +39,9 @@ FROM ${GOLANG} AS adguard
 RUN apk add git make
 COPY --from=adguard-src /AdGuardHome/ /AdGuardHome/
 WORKDIR /AdGuardHome/
-RUN go get
+RUN go mod download
 COPY --from=adguard-web /tmp/static/ ./build/static/
-RUN make CHANNEL="release" VERBOSE=1 go-build
+RUN make CHANNEL="release" VERBOSE=1 GOTOOLCHAIN=local go-build
 RUN mv AdGuardHome /tmp/
 
 FROM ${RUST} AS rust-mods
