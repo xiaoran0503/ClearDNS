@@ -1366,6 +1366,7 @@ clarionproject.org
 clashyun.com
 class.tn.edu.tw
 classicalguitarblog.net
+clau.de
 claude.ai
 claude.com
 clb.org.hk
@@ -5190,7 +5191,6 @@ pixelqi.com
 pixiv.net
 pixiv.org
 pixivsketch.net
-pixnet.in
 pixnet.net
 pk.com
 pki.goog
