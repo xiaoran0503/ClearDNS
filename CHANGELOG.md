@@ -455,3 +455,17 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
 ### 验证
 
 - 推送 `master` 触发 Docker Build；部署后查询日志应出现「归属地」列，详情如 `A: 172.67.147.11 (ttl=300) 美国 Cloudflare`。
+
+## v2.0.19 (2026-10-20) — 依赖批量升级（Check Versions issue #4 驱动）
+
+### 变更
+
+1. **overture fork 2.6.0 → 2.6.1**：纯依赖季度刷新（quic-go / go-redis / client_golang / x/net 等批量升最新，govulncheck 0 可达漏洞），无配置字段、协议行为与 DNS 应答语义变化（MIGRATION.md 已核验）；ClearDNS 生成的 overture.json 无需适配。
+2. **dnsproxy 0.85.0 → 0.86.0**：AdguardTeam 小版本升级，上游配置字段（listen-ports / bootstrap / upstream / fallback / all-servers / timeout）兼容，无 MIGRATION 破坏性变更。
+3. **构建 SDK 全部升到最新稳定版**：Go 1.27.1 → 1.27.2、Node 24.21.0 → 24.22.0、Rust 1.98.1 → 1.99.1。
+4. **routeCache 保持默认开启**（size 4096 / ttl 600，v2.0.17 起，仅缓存域名表分流决策，IP 反污染每次现查）。
+
+### 验证
+
+- 由 Check Versions workflow 巡检 issue #4（2026-10-19）驱动，全部为小版本升级，用户已决策；
+- 推送 `master` 触发 Docker Build；WSL 冒烟：镜像内 `overture --version` / `dnsproxy --version` 版本核对 + 国内外解析测试。

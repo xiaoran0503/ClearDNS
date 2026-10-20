@@ -7,18 +7,18 @@
 # =====================================================================
 
 ARG DEBIAN="debian:13.7-slim"
-ARG NODE="node:24.21.0-trixie"
-ARG RUST="rust:1.98.1-trixie"
-ARG GOLANG="golang:1.27.1-trixie"
+ARG NODE="node:24.22.0-trixie"
+ARG RUST="rust:1.99.1-trixie"
+ARG GOLANG="golang:1.27.2-trixie"
 ARG GH_MIRROR=""
 ARG GOPROXY="https://proxy.golang.org,direct"
 ARG APT_MIRROR="deb.debian.org"
 
-# ---------------- dnsproxy (0.85.0) ----------------
+# ---------------- dnsproxy (0.86.0) ----------------
 FROM ${GOLANG} AS dnsproxy
 ARG GH_MIRROR
 ARG GOPROXY
-ENV DNSPROXY="0.85.0"
+ENV DNSPROXY="0.86.0"
 ENV GOPROXY="${GOPROXY}"
 WORKDIR /
 RUN wget ${GH_MIRROR}https://github.com/AdguardTeam/dnsproxy/archive/v${DNSPROXY}.tar.gz -O- | tar xz
@@ -27,11 +27,11 @@ RUN go mod download
 RUN env CGO_ENABLED=0 go build -v -trimpath -ldflags "-X github.com/AdguardTeam/golibs/version.version=${DNSPROXY} -s -w"
 RUN mv dnsproxy /tmp/
 
-# ---------------- overture (fork v2.6.0) ----------------
+# ---------------- overture (fork v2.6.1) ----------------
 FROM ${GOLANG} AS overture
 ARG GH_MIRROR
 ARG GOPROXY
-ENV OVERTURE="2.6.0"
+ENV OVERTURE="2.6.1"
 ENV GOPROXY="${GOPROXY}"
 WORKDIR /
 RUN wget ${GH_MIRROR}https://github.com/xiaoran0503/overture/archive/v${OVERTURE}.tar.gz -O- | tar xz
