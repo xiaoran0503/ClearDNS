@@ -7,9 +7,9 @@
 # =====================================================================
 
 ARG DEBIAN="debian:13.7-slim"
-ARG NODE="node:24.22.0-trixie"
+ARG NODE="node:24.22.2-trixie"
 ARG RUST="rust:1.99.1-trixie"
-ARG GOLANG="golang:1.27.2-trixie"
+ARG GOLANG="golang:1.27.3-trixie"
 ARG GH_MIRROR=""
 ARG GOPROXY="https://proxy.golang.org,direct"
 ARG APT_MIRROR="deb.debian.org"
@@ -40,11 +40,11 @@ RUN go mod download
 RUN env CGO_ENABLED=0 go build -v -trimpath -ldflags "-X main.version=v${OVERTURE} -s -w" -o overture ./main
 RUN mv overture /tmp/overture
 
-# ---------------- AdGuardHome 源码 (0.107.79) ----------------
+# ---------------- AdGuardHome 源码 (1.0.0-b.2) ----------------
 FROM ${DEBIAN} AS adguard-src
 ARG GH_MIRROR
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
-ENV ADGUARD="0.107.79"
+ENV ADGUARD="1.0.0-b.2"
 RUN git clone ${GH_MIRROR}https://github.com/AdguardTeam/AdGuardHome.git -b v${ADGUARD} --depth=1
 COPY patches/adguardhome/overlay/ /AdGuardHome/
 COPY patches/adguardhome/git/ /tmp/agh-patches/
