@@ -1,9 +1,11 @@
 # =====================================================================
 # ClearDNS Docker 镜像自动构建（AI 接手维护，v2.x 维护线）
-# - 触发：push master + 手动 dispatch（可选 tag 输入）
+# - 触发：push master + Update Assets 完成后（workflow_run）+ 手动 dispatch（可选 tag 输入）
 # - 产物：docker.io/xiaoran05032/cleardns:latest（tag 输入时附加 :<tag>）
 # - 凭据：DOCKERHUB_USERNAME / DOCKERHUB_TOKEN（仓库 Secrets，不进代码库）
 # - 海外 runner 直连上游，GHA 层缓存加速增量构建
+# - 随每日 assets 同步重建：Dockerfile ip2region 阶段构建时拉取最新 xdb，
+#   AdGuardHome 归属地库跟着刷新（无需单独维护数据文件）
 # =====================================================================
 name: Docker Build
 
@@ -12,6 +14,11 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  # Update Assets 每日同步完成后顺带重建（仅上游成功时构建）
+  workflow_run:
+    workflows: ["Update Assets"]
+    types: [completed]
+    branches: [master]
   push:
     branches: [master]
     paths-ignore:
@@ -28,6 +35,8 @@ on:
 
 jobs:
   build:
+    # workflow_run 触发时仅在上游 Update Assets 成功时构建
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-26.04
     timeout-minutes: 90
     permissions:
