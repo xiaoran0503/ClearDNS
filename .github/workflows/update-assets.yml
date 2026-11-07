@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  # 需要 dispatch 同仓库的 Docker Build（assets 更新后顺带刷新镜像与 ip2region 归属地库）
+  actions: write
 
 jobs:
   update-assets:
@@ -48,13 +50,25 @@ jobs:
           xz -f -9 -k chinalist.txt
 
       - name: Commit and push
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/*.txt assets/*.txt.xz
           if git diff --cached --quiet; then
             echo "No changes to commit"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "build: update assets $(date -u +%Y-%m-%d)"
             git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # assets 有更新时顺带重建镜像：Dockerfile 的 ip2region 阶段会在构建时拉取
+      # lionsoul2014/ip2region master 的最新 v4/v6 xdb，归属地库随每日同步一起刷新。
+      # workflow_dispatch 手动触发时同样强制构建（便于手动发布/验证）。
+      - name: Trigger Docker build
+        if: steps.commit.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run docker-build.yml --ref master
