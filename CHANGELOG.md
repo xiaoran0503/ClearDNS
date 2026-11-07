@@ -469,3 +469,21 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
 
 - 由 Check Versions workflow 巡检 issue #4（2026-10-19）驱动，全部为小版本升级，用户已决策；
 - 推送 `master` 触发 Docker Build；WSL 冒烟：镜像内 `overture --version` / `dnsproxy --version` 版本核对 + 国内外解析测试。
+## v2.1.0 (2026-11-07) — AdGuardHome 升级到 1.0.0-b.2（实验线转正）
+
+### 变更
+
+1. **AdGuardHome 0.107.79 → 1.0.0-b.2**：1.0 beta 线最新版（2026-11-05），稳定线仍为 0.107.80。三项定制全部保留并在 1.0 上重新适配：隐藏安装向导（`0001`）、querylog JSON 应答 `geo`（`0002`，1.0 上原样可用）、表格归属地列 + 详情回应归属地（`0003`，按 1.0 的 `client_v2` 重制，10 个文件）。
+2. **Go 1.27.2 → 1.27.3**：AGH 1.0 的 `go.mod` / `Makefile` 锁定 `go1.27.3`，Dockerfile 使用 `GOTOOLCHAIN=local`，必须同版本。
+3. **Node 24.22.0 → 26.13.0**：GHA 实测构建通过（run 42347163742，2 分 56 秒全绿）；前端仅构建期使用，最终镜像不含 Node。
+4. **其余上游均为当前最新，未动**：Rust 1.99.1、Debian 13.7-slim、dnsproxy 0.86.0、overture 2.6.1。
+5. **1.0 行为差异（后续排查注意）**：登录 API 字段 `username` → `name`（旧写法返回 403）；querylog 的 `question` 由数组变为对象；配置文件 schema 27→34 自动迁移（6 级）；查询日志 UI 重构——表格内「查询详情」浮层只含基础字段与跟踪器，应答归属地在点击行打开的详情弹窗「响应」区。
+6. **CI 收口**：实验期临时 workflow `agh10-preview.yml`（推 `agh1.0-preview` tag）已删除，合入后沿用 `docker-build.yml`（master push 构建 `latest`）。
+
+### 验证
+
+- 构建：run 42345455537（Node 24.22.2）、42347163742（Node 26.13.0）均 success。
+- 部署冒烟（WSL + 1ms 镜像，AGH 1.0 镜像）：启动日志 `AdGuard Home, version v1.0.0-b.2`、schema 迁移 27→34 全通过、`ipgeo` 双 xdb 加载（v4 11.1MB / v6 37.3MB）、`dnsproxy 0.86.0`、`Overture v2.6.1`；UDP 15353 四条查询（baidu/github/example/qq）全部应答。
+- 定制验证：`/control/querylog` 应答含 `geo`（深圳 联通 / 美国 / 韩国 / 保定 联通）；页面无「设置向导」；表格含「归属地」列；行详情弹窗「响应」显示 `A: 172.66.147.243 (ttl=130) 美国`；页脚 `v1.0.0-b.2`。
+- 登录 API 变更已实测：`{"username":...}` → 403，`{"name":...}` → 200（cookie `agh_session`）。
+- Node 26 镜像的运行期冒烟未在本机完成（1ms 镜像站 digest 同步延迟），已由用户自测确认正常。

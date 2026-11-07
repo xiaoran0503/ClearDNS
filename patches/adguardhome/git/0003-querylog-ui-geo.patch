@@ -1,22 +1,22 @@
 diff --git a/client_v2/src/__locales/en.json b/client_v2/src/__locales/en.json
-index e86f5af..17ee64d 100644
+index 363173d..60abaa9 100644
 --- a/client_v2/src/__locales/en.json
 +++ b/client_v2/src/__locales/en.json
 @@ -571,6 +571,7 @@
+   "query_log_rewritten": "Rewritten",
    "query_log_safe_search": "Safe search",
-   "query_log_strict_search": "Use double quotes for strict search",
    "reason_table_header": "Reason",
 +  "answer_geo_table_header": "Geo",
    "refresh_btn": "Refresh",
    "refresh_statics": "Refresh statistics",
    "release_notes": "Release notes",
 diff --git a/client_v2/src/__locales/zh-cn.json b/client_v2/src/__locales/zh-cn.json
-index 0cc7678..4fefe76 100644
+index c34f4e1..9be524d 100644
 --- a/client_v2/src/__locales/zh-cn.json
 +++ b/client_v2/src/__locales/zh-cn.json
-@@ -644,6 +644,7 @@
-   "rate_limit_subnet_len_ipv4_error": "IPv4 子网前缀长度应介于 0 到 32 之间",
-   "rate_limit_subnet_len_ipv6_error": "IPv6 子网前缀长度应介于 0 到 128 之间",
+@@ -571,6 +571,7 @@
+   "query_log_rewritten": "重写项",
+   "query_log_safe_search": "安全搜索",
    "reason_table_header": "原因",
 +  "answer_geo_table_header": "归属地",
    "refresh_btn": "刷新",
@@ -33,11 +33,11 @@ index 7a484ea..43a9709 100644
 +    geo?: string;
  }
 diff --git a/client_v2/src/components/QueryLog/blocks/DetailModal/DetailModal.tsx b/client_v2/src/components/QueryLog/blocks/DetailModal/DetailModal.tsx
-index 849a275..e0a44ab 100644
+index ab332d4..19b7eaa 100644
 --- a/client_v2/src/components/QueryLog/blocks/DetailModal/DetailModal.tsx
 +++ b/client_v2/src/components/QueryLog/blocks/DetailModal/DetailModal.tsx
-@@ -41,20 +41,19 @@ type Props = {
-     onAllowService: (serviceId: string) => void;
+@@ -47,20 +47,19 @@ type Props = {
+     onEditRewrite: (rewrite: RewriteEntry) => void;
  };
  
 -const formatResponses = (responses: { value?: string; type?: string; ttl?: number }[] = []) =>
@@ -64,10 +64,10 @@ index 849a275..e0a44ab 100644
          .filter(Boolean);
  
 diff --git a/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.module.pcss b/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.module.pcss
-index d3d9566..42549e0 100644
+index 4e299d7..aabcd11 100644
 --- a/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.module.pcss
 +++ b/client_v2/src/components/QueryLog/blocks/LogTable/LogTable.module.pcss
-@@ -169,6 +169,7 @@
+@@ -170,6 +170,7 @@
  
  .statusCell,
  .reasonCell,
@@ -75,7 +75,7 @@ index d3d9566..42549e0 100644
  .clientCell {
      display: flex;
      flex-direction: column;
-@@ -316,3 +317,9 @@
+@@ -317,3 +318,9 @@
      width: 48px;
      height: 48px;
  }
@@ -134,10 +134,10 @@ index dd37533..18e95a8 100644
  
  export type WhoisInfo = {
 diff --git a/client_v2/src/helpers/helpers.tsx b/client_v2/src/helpers/helpers.tsx
-index 7633851..4702600 100644
+index 3fc2bd8..818bb02 100644
 --- a/client_v2/src/helpers/helpers.tsx
 +++ b/client_v2/src/helpers/helpers.tsx
-@@ -39,6 +39,7 @@ export type NormalizedDnsResponse = {
+@@ -41,6 +41,7 @@ export type NormalizedDnsResponse = {
      value?: string;
      type?: string;
      ttl?: number;
@@ -145,7 +145,7 @@ index 7633851..4702600 100644
  };
  
  export type NormalizedQueryLogItem = {
-@@ -129,12 +130,13 @@ export const normalizeLogs = (logs: QueryLogItem[]): NormalizedQueryLogItem[] =>
+@@ -131,12 +132,13 @@ export const normalizeLogs = (logs: QueryLogItem[]): NormalizedQueryLogItem[] =>
          const processResponse = (data: DnsAnswer[] | undefined): NormalizedDnsResponse[] =>
              Array.isArray(data)
                  ? data.map((response: DnsAnswer) => {

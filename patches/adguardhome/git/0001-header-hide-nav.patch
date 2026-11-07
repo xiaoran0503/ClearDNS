@@ -1,9 +1,9 @@
 diff --git a/client_v2/src/common/ui/Menu/Menu.tsx b/client_v2/src/common/ui/Menu/Menu.tsx
-index ae74aa1..bbf8487 100644
+index 3ed5cd8..9f99ab4 100644
 --- a/client_v2/src/common/ui/Menu/Menu.tsx
 +++ b/client_v2/src/common/ui/Menu/Menu.tsx
-@@ -127,17 +127,6 @@ export const Menu = (props: Props) => {
-                         <span class={theme.common.textOverflow}>{intl.getMessage('logs')}</span>
+@@ -129,17 +129,6 @@ export const Menu = (props: Props) => {
+                         </span>
                      </Link>
                  </div>
 -                <div class={cn(s.menuLinkWrapper)}>
