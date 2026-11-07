@@ -7,7 +7,7 @@
 # =====================================================================
 
 ARG DEBIAN="debian:13.7-slim"
-ARG NODE="node:24.22.2-trixie"
+ARG NODE="node:26.13.0-trixie"
 ARG RUST="rust:1.99.1-trixie"
 ARG GOLANG="golang:1.27.3-trixie"
 ARG GH_MIRROR=""
