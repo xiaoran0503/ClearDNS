@@ -4,8 +4,8 @@
 # - 产物：docker.io/xiaoran05032/cleardns:latest（tag 输入时附加 :<tag>）
 # - 凭据：DOCKERHUB_USERNAME / DOCKERHUB_TOKEN（仓库 Secrets，不进代码库）
 # - 海外 runner 直连上游，GHA 层缓存加速增量构建
-# - 随每日 assets 同步重建：Dockerfile ip2region 阶段构建时拉取最新 xdb，
-#   AdGuardHome 归属地库跟着刷新（无需单独维护数据文件）
+# - 随每日 assets 同步重建：分流表走构建上下文（层键随内容变），
+#   ip2region 阶段由 IP2REGION_CACHE=构建日期 强制失效层缓存，xdb 才会真正重取
 # =====================================================================
 name: Docker Build
 
@@ -51,6 +51,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Build date (cache key)
+        id: builddate
+        run: echo "value=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -76,5 +80,6 @@ jobs:
           build-args: |
             GH_MIRROR=
             GOPROXY=https://proxy.golang.org,direct
+            IP2REGION_CACHE=${{ steps.builddate.outputs.value }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -487,3 +487,23 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
 - 定制验证：`/control/querylog` 应答含 `geo`（深圳 联通 / 美国 / 韩国 / 保定 联通）；页面无「设置向导」；表格含「归属地」列；行详情弹窗「响应」显示 `A: 172.66.147.243 (ttl=130) 美国`；页脚 `v1.0.0-b.2`。
 - 登录 API 变更已实测：`{"username":...}` → 403，`{"name":...}` → 200（cookie `agh_session`）。
 - Node 26 镜像的运行期冒烟未在本机完成（1ms 镜像站 digest 同步延迟），已由用户自测确认正常。
+
+## v2.1.1 (2026-11-11) — overture 2.6.2 + Go 1.27.4 + 修复镜像内数据因层缓存而静默陈旧
+
+### 变更
+
+1. **overture fork 2.6.1 → 2.6.2**（fork 2026-11-11 发布）：coredns 1.14.7 → 1.15.0、quic-go 0.64.1 → 0.65.0、x/net 0.61.0 → 0.62.0（清 GO-2026-6860 / GO-2026-6866，均落在 `x/net/html`，本项目只 import `x/net/proxy`，模块级不可达）、x/sync 0.24.0 → 0.25.0。公开配置与 DNS 应答语义不变，ClearDNS 生成的 `overture.json` 无需适配。
+2. **Go 1.27.3 → 1.27.4**（patch）：AGH 1.0.0-b.2 的 `go.mod` 只要求 `go 1.27.3` 下限，`GOTOOLCHAIN=local` 下 1.27.4 可满足；dnsproxy / overture 同阶段一并受益。
+3. **修复构建链静默陈旧（v2.1.0 遗留缺陷）**：
+   - **暴露的证据**：11-10 构建镜像（digest `sha256:a95b82d8…`）内 `ip2region_v4.xdb` 为 11122714 B / `46249ad1…`，等于上游 **2026-10-28 提交 6a276cc7**；上游 master（2026-11-09 `f8410adb`）为 11122742 B / `a12ad5ac…`。镜像内三张分流表 106223 / 165003 / 1694184 B 与 **11-07 提交 697d973** 完全一致，而当时 master（11-10）为 106214 / 164918 / 1694148 B。
+   - **根因**：`docker-build.yml` 启用 gha 层缓存（`cache-from/cache-to: type=gha, mode=max`），而 ip2region、assets 两阶段在 `RUN` 里 `wget` 远程内容——网络响应不进层缓存键，Dockerfile 不变就一直复用 11-07 的旧层。此前"每日 assets 同步后重建即刷新 ip2region xdb"的结论不成立。
+   - **修复**：ip2region 阶段新增 `ARG IP2REGION_CACHE`（CI 传构建日期强制失效）与真正可用的 `IP2REGION_V4` / `IP2REGION_V6` URL 覆盖；assets 阶段改为 `COPY` 仓库内已跟踪的 `.xz`（层缓存键随文件内容变化，同时去掉对 raw.githubusercontent 的构建期依赖）。
+4. **补打 git tag `v2.1.0`**：此前缺失，导致镜像内 `cleardns --version` 停留在 `v2.0.18-48-g…`，与 CHANGELOG 对不上。
+
+### 影响面
+
+- 生产若在 11-07~11-10 期间拉取过 `latest`，其 AdGuardHome 归属地库为 **10-28 版**（差 1 次数据更新），分流表为 11-07 版（仅影响首启，运行后每日 cron 会重新下发覆盖）。升级到 v2.1.1 镜像即带 11-09 版 xdb 与当日分流表。
+
+### 验证
+
+- 待本轮 Docker Build 完成后续填：镜像 digest、`ip2region_v4.xdb` 哈希与上游 `f8410adb` 一致、三张分流表字节数与当次提交一致、`cleardns --version` 含 `v2.1.1`、`dnsproxy 0.86.0` / `Overture v2.6.2` / `AdGuard Home v1.0.0-b.2`、ipgeo 双库加载、国内外解析。

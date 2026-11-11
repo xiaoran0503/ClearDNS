@@ -40,7 +40,11 @@ Keep AGH customizations here. Do not edit AdGuard Home in the image by hand.
 ## Runtime
 
 xdb files are **not** in git. The image downloads them at build time to
-`/usr/share/ip2region/ip2region_v{4,6}.xdb`. Override with `IP2REGION_V4` /
-`IP2REGION_V6`. If a file is missing, AGH still starts and geo fields stay empty.
+`/usr/share/ip2region/ip2region_v{4,6}.xdb`. Build args `IP2REGION_V4` /
+`IP2REGION_V6` override the source URLs, and `IP2REGION_CACHE` (CI passes the
+build date) must change for the download to actually re-run: `RUN`-stage
+network fetches are not part of the Docker layer cache key, so an unchanged
+value silently reuses a stale xdb. If a file is missing, AGH still starts and
+geo fields stay empty.
 
 ip2region `xdb` searcher is Apache-2.0 OR MIT; see `overlay/internal/ipgeo/xdb/LICENSE.md`.

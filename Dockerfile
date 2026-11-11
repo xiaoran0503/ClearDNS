@@ -9,7 +9,7 @@
 ARG DEBIAN="debian:13.7-slim"
 ARG NODE="node:26.13.0-trixie"
 ARG RUST="rust:1.99.1-trixie"
-ARG GOLANG="golang:1.27.3-trixie"
+ARG GOLANG="golang:1.27.4-trixie"
 ARG GH_MIRROR=""
 ARG GOPROXY="https://proxy.golang.org,direct"
 ARG APT_MIRROR="deb.debian.org"
@@ -27,11 +27,11 @@ RUN go mod download
 RUN env CGO_ENABLED=0 go build -v -trimpath -ldflags "-X github.com/AdguardTeam/golibs/version.version=${DNSPROXY} -s -w"
 RUN mv dnsproxy /tmp/
 
-# ---------------- overture (fork v2.6.1) ----------------
+# ---------------- overture (fork v2.6.2) ----------------
 FROM ${GOLANG} AS overture
 ARG GH_MIRROR
 ARG GOPROXY
-ENV OVERTURE="2.6.1"
+ENV OVERTURE="2.6.2"
 ENV GOPROXY="${GOPROXY}"
 WORKDIR /
 RUN wget ${GH_MIRROR}https://github.com/xiaoran0503/overture/archive/v${OVERTURE}.tar.gz -O- | tar xz
@@ -94,18 +94,24 @@ RUN mv cleardns /tmp/
 # ---------------- ip2region 离线库（查询日志应答归属地，不进 git） ----------------
 FROM ${DEBIAN} AS ip2region
 ARG GH_MIRROR
+# 上游数据（lionsoul2014/ip2region master）随时可能更新，但 RUN 里的网络请求不进层缓存键，
+# Dockerfile 不变就会被 gha 缓存一直复用旧库（v2.1.1 起修）。由 CI 传入构建日期强制失效。
+ARG IP2REGION_CACHE="unset"
+ARG IP2REGION_V4="https://github.com/lionsoul2014/ip2region/raw/master/data/ip2region_v4.xdb"
+ARG IP2REGION_V6="https://github.com/lionsoul2014/ip2region/raw/master/data/ip2region_v6.xdb"
 RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates && rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /usr/share/ip2region && \
-    wget -nv -O /usr/share/ip2region/ip2region_v4.xdb ${GH_MIRROR}https://github.com/lionsoul2014/ip2region/raw/master/data/ip2region_v4.xdb && \
-    wget -nv -O /usr/share/ip2region/ip2region_v6.xdb ${GH_MIRROR}https://github.com/lionsoul2014/ip2region/raw/master/data/ip2region_v6.xdb
+RUN echo "ip2region cache key: ${IP2REGION_CACHE}" && mkdir -p /usr/share/ip2region && \
+    wget -nv -O /usr/share/ip2region/ip2region_v4.xdb ${GH_MIRROR}${IP2REGION_V4} && \
+    wget -nv -O /usr/share/ip2region/ip2region_v6.xdb ${GH_MIRROR}${IP2REGION_V6} && \
+    sha256sum /usr/share/ip2region/*.xdb
 
-# ---------------- 分流资源文件（仓库自动维护，直连） ----------------
+# ---------------- 分流资源文件（仓库自动维护，直接从构建上下文拷贝） ----------------
+# 旧实现用 wget 拉仓库 master 的 .xz，同样会命中 gha 层缓存导致镜像里带旧分流表；
+# 改为 COPY 仓库内已跟踪的资产，层缓存键随文件内容变化，且不再依赖网络。
 FROM ${DEBIAN} AS assets
-ARG GH_MIRROR
-RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates xz-utils && rm -rf /var/lib/apt/lists/*
-RUN wget ${GH_MIRROR}https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/gfwlist.txt.xz
-RUN wget ${GH_MIRROR}https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/china-ip.txt.xz
-RUN wget ${GH_MIRROR}https://raw.githubusercontent.com/xiaoran0503/ClearDNS/master/assets/chinalist.txt.xz
+RUN apt-get update && apt-get install -y --no-install-recommends xz-utils && rm -rf /var/lib/apt/lists/*
+COPY assets/gfwlist.txt.xz assets/china-ip.txt.xz assets/chinalist.txt.xz /tmp/assets/
+WORKDIR /tmp/assets/
 RUN xz -d *.xz && tar cJf /tmp/assets.tar.xz gfwlist.txt china-ip.txt chinalist.txt
 
 # ---------------- release 打包 + UPX 压缩 ----------------
