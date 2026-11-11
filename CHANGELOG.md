@@ -498,13 +498,17 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
    - **暴露的证据**：11-10 构建镜像（digest `sha256:a95b82d8…`）内 `ip2region_v4.xdb` 为 11122714 B / `46249ad1…`，等于上游 **2026-10-28 提交 6a276cc7**；上游 master（2026-11-09 `f8410adb`）为 11122742 B / `a12ad5ac…`。镜像内三张分流表 106223 / 165003 / 1694184 B 与 **11-07 提交 697d973** 完全一致，而当时 master（11-10）为 106214 / 164918 / 1694148 B。
    - **根因**：`docker-build.yml` 启用 gha 层缓存（`cache-from/cache-to: type=gha, mode=max`），而 ip2region、assets 两阶段在 `RUN` 里 `wget` 远程内容——网络响应不进层缓存键，Dockerfile 不变就一直复用 11-07 的旧层。此前"每日 assets 同步后重建即刷新 ip2region xdb"的结论不成立。
    - **修复**：ip2region 阶段新增 `ARG IP2REGION_CACHE`（CI 传构建日期强制失效）与真正可用的 `IP2REGION_V4` / `IP2REGION_V6` URL 覆盖；assets 阶段改为 `COPY` 仓库内已跟踪的 `.xz`（层缓存键随文件内容变化，同时去掉对 raw.githubusercontent 的构建期依赖）。
-4. **补打 git tag `v2.1.0`**：此前缺失，导致镜像内 `cleardns --version` 停留在 `v2.0.18-48-g…`，与 CHANGELOG 对不上。
+4. **补打 git tag `v2.1.0` / `v2.1.1`**：此前最新 tag 只有 `v2.0.18`，导致镜像内 `cleardns --version` 停留在 `v2.0.18-49-g…`，与 CHANGELOG 对不上；镜像版本号由 `git describe --tags` 生成，tag 必须在 CI checkout 之前就存在。
 5. **镜像加 OCI 标签**：`org.opencontainers.image.revision=${BUILD_REVISION}`（CI 传 `github.sha`）、`title`、`source`，便于从镜像反查提交。
 
 ### 影响面
 
 - 生产若在 11-07~11-10 期间拉取过 `latest`，其 AdGuardHome 归属地库为 **10-28 版**（差 1 次数据更新），分流表为 11-07 版（仅影响首启，运行后每日 cron 会重新下发覆盖）。升级到 v2.1.1 镜像即带 11-09 版 xdb 与当日分流表。
 
-### 验证
+### 验证（2026-11-11 实测）
 
-- 待本轮 Docker Build 完成后续填：镜像 digest、`ip2region_v4.xdb` 哈希与上游 `f8410adb` 一致、三张分流表字节数与当次提交一致、`cleardns --version` 含 `v2.1.1`、`dnsproxy 0.86.0` / `Overture v2.6.2` / `AdGuard Home v1.0.0-b.2`、ipgeo 双库加载、国内外解析。
+- **产物**：`docker.1ms.run/xiaoran05032/cleardns@sha256:d8080816737edd59cbb2b760d2000eb0af496d19dfefe1539adcec3fdf12c625`（Docker Hub `latest`，`last_updated 2026-11-11T06:49:35Z`），OCI 标签 `org.opencontainers.image.revision=751394f26897298a83013b0d3615fed5a9de518d`、`title=ClearDNS`、`source=https://github.com/xiaoran0503/ClearDNS`。
+- **数据新鲜度**：`ip2region_v4.xdb` = 11122742 B / `a12ad5aca1277d67e525efcda531a20cc0d654ff4f087150d45bc17fca4bc260`（= 上游 `f8410adb` / 2026-11-09）；`ip2region_v6.xdb` = 37277813 B / `939f6b46bd2b8bec3cf7c5ceb8ba782266ae9b1f35b5ba7916700dec0b7506ed`。三张分流表 = 106214 / 164918 / 1694148 B，与 `751394f` 提交内文件逐字节一致。
+- **组件版本**：`ClearDNS version v2.1.1-1-g751394f`、`Overture v2.6.2`、`dnsproxy version 0.86.0`、`AdGuard Home, version v1.0.0-b.2`；AGH 配置自动迁移 `yaml from=27 to=34`。
+- **容器冒烟**（WSL docker，映射 15353 → 53/udp，挂载测试配置）：`Assets loading complete` → Domestic / Foreign / Overture / Crontab / AdGuardHome 全部 `running success`（PID 25/26/27/28/29）；`ipgeo: loaded … ip2region_v4.xdb (11122742 bytes)` 与 v6；`/etc/cleardns` 内 gfwlist / china-ip / chinalist = 7839 / 10307 / 134736 行。
+- **解析实测**（`15353` 端口，UDP）：baidu.com `rcode=0 an=4`、qq.com `rcode=0 an=1`、example.com `rcode=0 an=2`、github.com `rcode=0 an=1`（20.205.243.166）。
