@@ -127,6 +127,10 @@ RUN for f in cleardns dnsproxy overture AdGuardHome; do upx -9 "$f" 2>/dev/null 
 
 # ---------------- 最终运行时（Debian trixie-slim） ----------------
 FROM ${DEBIAN}
+ARG BUILD_REVISION="unknown"
+LABEL org.opencontainers.image.title="ClearDNS" \
+      org.opencontainers.image.revision="${BUILD_REVISION}" \
+      org.opencontainers.image.source="https://github.com/xiaoran0503/ClearDNS"
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates cron procps findutils xz-utils && rm -rf /var/lib/apt/lists/*
 RUN ln -sf /usr/sbin/cron /usr/sbin/crond
 COPY --from=release /release/ /

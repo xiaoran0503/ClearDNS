@@ -499,6 +499,7 @@ v2.0.10/v2.0.11 冒烟均观察到同一模式：`assets_update_run()` 末尾执
    - **根因**：`docker-build.yml` 启用 gha 层缓存（`cache-from/cache-to: type=gha, mode=max`），而 ip2region、assets 两阶段在 `RUN` 里 `wget` 远程内容——网络响应不进层缓存键，Dockerfile 不变就一直复用 11-07 的旧层。此前"每日 assets 同步后重建即刷新 ip2region xdb"的结论不成立。
    - **修复**：ip2region 阶段新增 `ARG IP2REGION_CACHE`（CI 传构建日期强制失效）与真正可用的 `IP2REGION_V4` / `IP2REGION_V6` URL 覆盖；assets 阶段改为 `COPY` 仓库内已跟踪的 `.xz`（层缓存键随文件内容变化，同时去掉对 raw.githubusercontent 的构建期依赖）。
 4. **补打 git tag `v2.1.0`**：此前缺失，导致镜像内 `cleardns --version` 停留在 `v2.0.18-48-g…`，与 CHANGELOG 对不上。
+5. **镜像加 OCI 标签**：`org.opencontainers.image.revision=${BUILD_REVISION}`（CI 传 `github.sha`）、`title`、`source`，便于从镜像反查提交。
 
 ### 影响面
 

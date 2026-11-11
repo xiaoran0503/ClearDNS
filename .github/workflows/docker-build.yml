@@ -81,5 +81,6 @@ jobs:
             GH_MIRROR=
             GOPROXY=https://proxy.golang.org,direct
             IP2REGION_CACHE=${{ steps.builddate.outputs.value }}
+            BUILD_REVISION=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
