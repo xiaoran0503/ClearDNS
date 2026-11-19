@@ -72626,6 +72626,7 @@ lenovocloudos.com
 lenovoconnect.com
 lenovoeservice.com
 lenovofile.com
+lenovofuturecenter.com
 lenovogame.com
 lenovohci.com
 lenovohit.com
@@ -90781,6 +90782,7 @@ qpjylm.com
 qpkaifa.com
 qplus.com
 qplusstatic.com
+qpmcn.com
 qpoc.com
 qpstar.com
 qpwater.com
@@ -108467,6 +108469,7 @@ troxchina.com
 trpc.center
 trpc.group
 trpc.tech
+trpcdn.com
 trpcdn.net
 trs-logistics.com
 trsoft.vip
@@ -130345,6 +130348,7 @@ zhaoketang.com
 zhaokuaizhao.com
 zhaolaobanla.com
 zhaoliangji.com
+zhaoliangjipc.com
 zhaoliming.net
 zhaolongedu.com
 zhaomei.ink
