@@ -1417,6 +1417,7 @@ clyp.it
 cmcn.org
 cmegroup.com
 cmi.org.tw
+cmmedia.com.tw
 cmoinc.org
 cmoney.tw
 cms.gov
@@ -3067,6 +3068,7 @@ greatfirewallofchina.org
 greatroc.org
 greatroc.tw
 greatzhonghua.org
+greenbean.media
 greenfieldbookstore.com.hk
 greenparty.org.tw
 greenpeace.com.tw
@@ -3276,10 +3278,12 @@ hkbookcity.com
 hkchronicles.com
 hkchurch.org
 hkci.org.hk
+hkcitycreation.com
 hkcmi.edu
 hkcnews.com
 hkcoc.com
 hkcoc.weather.com.hk
+hkcourtnews.com
 hkdailynews.com.hk
 hkday.net
 hkdc.us
@@ -3288,6 +3292,7 @@ hkej.com
 hkepc.com
 hket.com
 hkfaa.com
+hkfeature.com
 hkfreezone.com
 hkfront.org
 hkgalden.com
@@ -4040,6 +4045,7 @@ libredd.it
 lidecheng.com
 lifeattiktok.com
 lifemiles.com
+lifesitenews.com
 ligamx.net
 lighten.org.tw
 lighti.me
@@ -4050,6 +4056,7 @@ lihkg.com
 like.com
 likr.tw
 lilaoshibushinilaoshi.com
+limedia.tw
 limelight.moe
 limiao.net
 line-apps.com
@@ -4231,6 +4238,7 @@ marxists.org
 mas.to
 mash.to
 maskedip.com
+master-insight.com
 mastodon.cloud
 mastodon.host
 mastodon.online
@@ -4453,6 +4461,7 @@ mondex.org
 money-link.com.tw
 moneydj.com
 moneyhome.biz
+moneynet.com.tw
 monica.im
 monitorchina.org
 monlamit.org
@@ -4526,6 +4535,7 @@ muzu.tv
 mvg.jp
 mx981.com
 my-formosa.com
+my-formosa.com.tw
 my-private-network.co.uk
 my-proxy.com
 my.mail.ru
@@ -5795,6 +5805,7 @@ shahit.biz
 shambalapost.com
 shambhalasun.com
 shangfang.org
+shanghainationalparty.com
 shanxivideo.com
 shapeservices.com
 share-videos.se
@@ -6386,6 +6397,7 @@ thechinabeat.org
 thechinacollection.org
 thechinaproject.com
 thechinastory.org
+thecollectivehk.com
 theconversation.com
 thedalailamamovie.com
 thediplomat.com
@@ -6407,6 +6419,7 @@ theintercept.com
 thelallantop.com
 themoviedb.org
 thenewslens.com
+theonlinecitizen.com
 thepiratebay.ee
 thepiratebay.org
 theporndude.com
@@ -7395,6 +7408,7 @@ wo3ttt.wordpress.com
 woeser.com
 wokar.org
 wolfax.com
+womany.net
 wombo.ai
 woolyss.com
 woopie.jp
