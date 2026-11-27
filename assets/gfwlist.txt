@@ -259,6 +259,7 @@ ai.dev
 ai.google
 ai.ls
 ai.studio
+aicu.cc
 aidc.com.tw
 aihub.top
 aiosearch.com
@@ -1644,6 +1645,7 @@ dalianmeng.org
 daliulian.org
 danbooru.donmai.us
 danke4china.net
+danmakus.com
 danwei.org
 daolan.net
 daozhongxing.org
@@ -6032,6 +6034,7 @@ southmongolia.org
 southnews.com.tw
 southpark.cc.com
 sowers.org.hk
+spacedesk.net
 spaceforce.mil
 spaces.hightail.com
 spacex.com
